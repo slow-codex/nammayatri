@@ -1,9 +1,8 @@
 name: Compress Lottie Files
 on:
-  push:
-    paths:
-      - 'raw/**/*.json'  # Trigger on changes to raw/*.json files
-      - 'Frontend/android-native/app/src/main/res/raw/splash_lottie.json'
+  pull_request:
+  paths:
+    - '^Frontend/android-native/[^/]*/src/[^/]*/[^/]*/res/raw/.*\.json$'
 
 jobs:
   compress-lottie:
