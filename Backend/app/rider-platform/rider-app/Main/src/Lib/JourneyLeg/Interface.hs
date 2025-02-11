@@ -1,5 +1,6 @@
 module Lib.JourneyLeg.Interface where
 
+import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Trip as DTrip
@@ -35,14 +36,14 @@ getFare merchantId merchantOperatingCityId leg = \case
     getFareReq :: TaxiLegRequest <- mkTaxiGetFareReq
     JL.getFare getFareReq
   DTrip.Bus -> do
-    getFareReq :: BusLegRequest <- mkBusGetFareReq
-    JL.getFare getFareReq
+    getFareReq :: Maybe BusLegRequest <- mkBusGetFareReq
+    maybe (return Nothing) JL.getFare getFareReq
   DTrip.Metro -> do
-    getFareReq :: MetroLegRequest <- mkMetroGetFareReq
-    JL.getFare getFareReq
+    getFareReq :: Maybe MetroLegRequest <- mkMetroGetFareReq
+    maybe (return Nothing) JL.getFare getFareReq
   DTrip.Subway -> do
-    getFareReq :: SubwayLegRequest <- mkSubwayGetFareReq
-    JL.getFare getFareReq
+    getFareReq :: Maybe SubwayLegRequest <- mkSubwayGetFareReq
+    maybe (return Nothing) JL.getFare getFareReq
   DTrip.Walk -> do
     getFareReq :: WalkLegRequest <- mkWalkGetFareReq
     JL.getFare getFareReq
@@ -62,40 +63,75 @@ getFare merchantId merchantOperatingCityId leg = \case
               merchantOpCity
             }
 
-    mkBusGetFareReq :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, JL.JourneyLeg BusLegRequest m) => m BusLegRequest
+    mkBusGetFareReq :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, JL.JourneyLeg BusLegRequest m) => m (Maybe BusLegRequest)
     mkBusGetFareReq = do
-      return $
-        BusLegRequestGetFare $
-          BusLegRequestGetFareData
-            { startLocation = leg.startLocation.latLng,
-              endLocation = leg.endLocation.latLng
-            }
+      merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+      merchantOpCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
+      let mbRouteCode = gtfsIdtoDomainCode <$> (leg.routeDetails >>= (.gtfsId))
+      let mbStartStopCode = gtfsIdtoDomainCode <$> (leg.fromStopDetails >>= (.gtfsId))
+      let mbEndStopCode = gtfsIdtoDomainCode <$> (leg.toStopDetails >>= (.gtfsId))
+      case (mbRouteCode, mbStartStopCode, mbEndStopCode) of
+        (Just routeCode, Just startStopCode, Just endStopCode) ->
+          return $
+            Just $
+              BusLegRequestGetFare $
+                BusLegRequestGetFareData
+                  { startLocation = leg.startLocation.latLng,
+                    endLocation = leg.endLocation.latLng,
+                    ..
+                  }
+        _ -> return Nothing
 
-    mkMetroGetFareReq :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, JL.JourneyLeg MetroLegRequest m) => m MetroLegRequest
+    mkMetroGetFareReq :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, JL.JourneyLeg MetroLegRequest m) => m (Maybe MetroLegRequest)
     mkMetroGetFareReq = do
-      return $
-        MetroLegRequestGetFare $
-          MetroLegRequestGetFareData
-            { startLocation = leg.startLocation.latLng,
-              endLocation = leg.endLocation.latLng
-            }
+      merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+      merchantOpCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
+      let mbRouteCode = gtfsIdtoDomainCode <$> (leg.routeDetails >>= (.gtfsId))
+      let mbStartStopCode = gtfsIdtoDomainCode <$> (leg.fromStopDetails >>= (.gtfsId))
+      let mbEndStopCode = gtfsIdtoDomainCode <$> (leg.toStopDetails >>= (.gtfsId))
+      case (mbRouteCode, mbStartStopCode, mbEndStopCode) of
+        (Just routeCode, Just startStopCode, Just endStopCode) ->
+          return $
+            Just $
+              MetroLegRequestGetFare $
+                MetroLegRequestGetFareData
+                  { startLocation = leg.startLocation.latLng,
+                    endLocation = leg.endLocation.latLng,
+                    ..
+                  }
+        _ -> return Nothing
 
-    mkSubwayGetFareReq :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, JL.JourneyLeg SubwayLegRequest m) => m SubwayLegRequest
+    mkSubwayGetFareReq :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, JL.JourneyLeg SubwayLegRequest m) => m (Maybe SubwayLegRequest)
     mkSubwayGetFareReq = do
-      return $
-        SubwayLegRequestGetFare $
-          SubwayLegRequestGetFareData
-            { startLocation = leg.startLocation.latLng,
-              endLocation = leg.endLocation.latLng
-            }
+      merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+      merchantOpCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
+      let mbRouteCode = gtfsIdtoDomainCode <$> (leg.routeDetails >>= (.gtfsId))
+      let mbStartStopCode = gtfsIdtoDomainCode <$> (leg.fromStopDetails >>= (.gtfsId))
+      let mbEndStopCode = gtfsIdtoDomainCode <$> (leg.toStopDetails >>= (.gtfsId))
+      case (mbRouteCode, mbStartStopCode, mbEndStopCode) of
+        (Just routeCode, Just startStopCode, Just endStopCode) ->
+          return $
+            Just $
+              SubwayLegRequestGetFare $
+                SubwayLegRequestGetFareData
+                  { startLocation = leg.startLocation.latLng,
+                    endLocation = leg.endLocation.latLng,
+                    ..
+                  }
+        _ -> return Nothing
 
     mkWalkGetFareReq :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, JL.JourneyLeg WalkLegRequest m) => m WalkLegRequest
     mkWalkGetFareReq = do
       return $
         (WalkLegRequestGetFare WalkLegRequestGetFareData)
 
-confirm :: JL.ConfirmFlow m r c => JL.LegInfo -> m ()
-confirm JL.LegInfo {..} =
+    gtfsIdtoDomainCode :: Text -> Text
+    gtfsIdtoDomainCode gtfsId = case break (== ':') $ T.unpack gtfsId of
+      (_, ':' : code) -> T.pack code
+      _ -> gtfsId
+
+confirm :: JL.ConfirmFlow m r c => Bool -> JL.LegInfo -> m ()
+confirm forcedBooked JL.LegInfo {..} =
   case travelMode of
     DTrip.Taxi -> do
       confirmReq :: TaxiLegRequest <- mkTaxiLegConfirmReq
@@ -119,6 +155,8 @@ confirm JL.LegInfo {..} =
         TaxiLegRequestConfirm $
           TaxiLegRequestConfirmData
             { skipBooking = skipBooking,
+              forcedBooked,
+              searchId,
               estimateId = Id <$> pricingId,
               startTime,
               personId,
@@ -131,6 +169,7 @@ confirm JL.LegInfo {..} =
           MetroLegRequestConfirmData
             { skipBooking,
               bookingAllowed,
+              searchId = Id searchId,
               quoteId = Id <$> pricingId,
               personId,
               merchantId,
@@ -142,6 +181,7 @@ confirm JL.LegInfo {..} =
         SubwayLegRequestConfirm $
           SubwayLegRequestConfirmData
             { skipBooking,
+              searchId = Id searchId,
               bookingAllowed,
               quoteId = Id <$> pricingId,
               personId,
@@ -155,6 +195,7 @@ confirm JL.LegInfo {..} =
           BusLegRequestConfirmData
             { skipBooking,
               bookingAllowed,
+              searchId = Id searchId,
               quoteId = Id <$> pricingId,
               personId,
               merchantId,

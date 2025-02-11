@@ -33,6 +33,14 @@ getTa = Keymap {
 , continue: "தொடரவும்"
 , enter_your_name: "உங்கள் பெயரை உள்ளிடவும்"
 , full_name: "முழு பெயர்"
+, verifying: "சரிபார்க்கப்படுகிறது"
+, referral_code_verified : "பரிந்துரை குறியீடு சரிபார்க்கப்பட்டது"
+, referral_code_failed: "பரிந்துரை குறியீடு தவறானது! சரிபார்த்து மீண்டும் முயற்சிக்கவும்."
+, enter_6_digit_referral_code: "6 இலக்க பரிந்துரை குறியீட்டை உள்ளிடவும்"
+, not_verified: "சரிபார்க்கப்படவில்லை"
+, optional_bracketted: "(விருப்பத்திற்கேற்ப)"
+, verify: "சரிபார்க்கவும்"
+,referral_code : "ரெஃபரல் கோடு"
 , email: "மின்னஞ்சல்"
 , welcome_text: "{}-கு வரவேற்கிறோம்"
 , please_choose_your_preferred_language_to_continue: "தொடர உங்களுக்கு விருப்பமான மொழியைத் தேர்ந்தெடுக்கவும்."
@@ -1278,6 +1286,8 @@ getTa = Keymap {
 , view_fares: "கட்டணங்களைக் காண்க"
 , excess_time_description: (\charges -> "அதிகப்படியான நேரம் " <> charges <> " வசூலிக்கப்படும்")
 , estimated_charges: "மதிப்பிடப்பட்ட கட்டணங்கள்"
+, your_cancellation_rate_is_high: "உங்கள் ரத்து விகிதம் அதிகமாக உள்ளது!"
+, avoid_further_cancellations_to_keep_using_app: (\appName -> appName <> " ஐ தொடர்ந்து பயன்படுத்த, இனி ரத்து செய்வதைத் தவிர்க்கவும்.")
 , night_time_fees: "இரவு நேர கட்டணங்கள்"
 , parking_and_other_charges: "பார்க்கிங் மற்றும் மற்ற கட்டணங்கள்"
 , additional_charges: "கூடுதல் கட்டணங்கள்"
@@ -1719,4 +1729,12 @@ getTa = Keymap {
 , experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> s <> " பிரதான வழிகளில் எங்கள் பஸ்ஸ் டிக்கெட்டிங் பைலட் வெளியீட்டை அனுபவிக்கவும். மேலும் வழிகள் விரைவில் அறிமுகமாகின்றன!")
 , note_your_ticket_is_only_valid_for : (\s -> "குறிப்பு: உங்கள் டிக்கெட் " <> s <> " மட்டுமே செல்லுபடியாகும். உள்ளூர் நிலைகளின் காரணமாக பஸ்களின் நேரம் மாறலாம், எனவே நீங்கள் பதிவு செய்யும் போது நிறுத்தத்தில் தயாராக இருங்கள்.")
 , here_is_bus_ticket : "இங்கே உங்கள் பஸ் டிக்கெட்"
+,a_c : "ஒப்புக்கொள் & தெரிவி"
+,no_oxygen : "ஆக்சிஜன் இல்லை"
+,oxygen : "ஆக்சிஜன்"
+,ventilator : "குளிர்ச்சிக்குரிய"
+,ambulance_ : "ஆம்புலன்ஸ்"
+,uncomfortable_ambulance : "சிரமமான ஆம்புலன்ஸ்"
+,clean_ambulance : "சுத்தமான ஆம்புலன்ஸ்"
+,ambulance_booking_disclaimer : "యాత్రి సాతి అనేది కేవలం ఆంబ్యులెన్స్ సేవా ప్రొవైడర్లను కస్టమర్లతో కలుపుకునే ఒక వేదిక. ఆంబ్యులెన్స్ పార్టీ అందించే సమాచారానికి మేము బాధ్యత వహించము."
 }

@@ -11,7 +11,6 @@ import qualified API.Types.UI.MultimodalConfirm
 import qualified Control.Lens
 import qualified Domain.Action.UI.MultimodalConfirm as Domain.Action.UI.MultimodalConfirm
 import qualified Domain.Types.Journey
-import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment
@@ -35,6 +34,9 @@ type API =
            "journeyId"
            (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
       :> "confirm"
+      :> QueryParam
+           "forceBookLegOrder"
+           Kernel.Prelude.Int
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
@@ -61,8 +63,8 @@ type API =
       :<|> TokenAuth
       :> "multimodal"
       :> Capture
-           "legId"
-           Kernel.Prelude.Text
+           "journeyId"
+           (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
       :> "switch"
       :> ReqBody
            '[JSON]
@@ -78,8 +80,8 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
       :> "leg"
       :> Capture
-           "legId"
-           (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg)
+           "legOrder"
+           Kernel.Prelude.Int
       :> "skip"
       :> Post
            '[JSON]
@@ -99,6 +101,20 @@ type API =
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "multimodal"
+      :> "extend"
+      :> Capture
+           "journeyId"
+           (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
+      :> "leg"
+      :> "getfare"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.MultimodalConfirm.ExtendLegGetFareReq
+      :> Post
+           '[JSON]
+           API.Types.UI.MultimodalConfirm.ExtendLegGetFareResp
+      :<|> TokenAuth
+      :> "multimodal"
       :> "journey"
       :> Capture
            "journeyId"
@@ -106,7 +122,7 @@ type API =
       :> "status"
       :> Get
            '[JSON]
-           API.Types.UI.MultimodalConfirm.JourneyStatus
+           API.Types.UI.MultimodalConfirm.JourneyStatusResp
       :<|> TokenAuth
       :> "multimodal"
       :> "journey"
@@ -129,7 +145,7 @@ type API =
            API.Types.UI.MultimodalConfirm.RiderLocationReq
       :> Post
            '[JSON]
-           API.Types.UI.MultimodalConfirm.JourneyStatus
+           API.Types.UI.MultimodalConfirm.JourneyStatusResp
       :<|> TokenAuth
       :> "multimodal"
       :> Capture
@@ -146,10 +162,22 @@ type API =
       :> Post
            '[JSON]
            API.Types.UI.MultimodalConfirm.JourneyInfoResp
+      :<|> TokenAuth
+      :> "multimodal"
+      :> Capture
+           "journeyId"
+           (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
+      :> "journeyFeedback"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.MultimodalConfirm.JourneyFeedBackForm
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = postMultimodalInitiate :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> getMultimodalBookingPaymentStatus :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalExtendLeg :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> postMultimodalRiderLocation :<|> postMultimodalOrderSwitchTaxi
+handler = postMultimodalInitiate :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> getMultimodalBookingPaymentStatus :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalExtendLeg :<|> postMultimodalExtendLegGetfare :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> postMultimodalRiderLocation :<|> postMultimodalOrderSwitchTaxi :<|> postMultimodalJourneyFeedback
 
 postMultimodalInitiate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -165,9 +193,10 @@ postMultimodalConfirm ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalConfirm a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postMultimodalConfirm a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getMultimodalBookingInfo ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -191,7 +220,7 @@ postMultimodalSwitch ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Text ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     API.Types.UI.MultimodalConfirm.SwitchLegReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
@@ -202,7 +231,7 @@ postMultimodalJourneyLegSkip ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
-    Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg ->
+    Kernel.Prelude.Int ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postMultimodalJourneyLegSkip a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalJourneyLegSkip (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
@@ -217,12 +246,22 @@ postMultimodalExtendLeg ::
   )
 postMultimodalExtendLeg a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalExtendLeg (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
+postMultimodalExtendLegGetfare ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    API.Types.UI.MultimodalConfirm.ExtendLegGetFareReq ->
+    Environment.FlowHandler API.Types.UI.MultimodalConfirm.ExtendLegGetFareResp
+  )
+postMultimodalExtendLegGetfare a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalExtendLegGetfare (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
 getMultimodalJourneyStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
-    Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyStatus
+    Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyStatusResp
   )
 getMultimodalJourneyStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalJourneyStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
@@ -241,7 +280,7 @@ postMultimodalRiderLocation ::
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     API.Types.UI.MultimodalConfirm.RiderLocationReq ->
-    Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyStatus
+    Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyStatusResp
   )
 postMultimodalRiderLocation a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalRiderLocation (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
@@ -255,3 +294,13 @@ postMultimodalOrderSwitchTaxi ::
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
 postMultimodalOrderSwitchTaxi a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSwitchTaxi (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+
+postMultimodalJourneyFeedback ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    API.Types.UI.MultimodalConfirm.JourneyFeedBackForm ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postMultimodalJourneyFeedback a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalJourneyFeedback (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

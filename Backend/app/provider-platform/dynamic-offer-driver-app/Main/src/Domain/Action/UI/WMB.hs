@@ -41,6 +41,7 @@ import Domain.Types.Route
 import Domain.Types.RouteTripStopMapping
 import Domain.Types.TripTransaction
 import Domain.Types.Vehicle
+import qualified Domain.Types.VehicleCategory as DVehCategory
 import qualified Domain.Types.VehicleVariant as DVehVariant
 import Environment
 import qualified EulerHS.Prelude as EHS
@@ -67,6 +68,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.ApprovalRequest as QDR
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.Person as QPerson
@@ -154,7 +156,7 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
   case tripTransactions of
     [] -> pure ()
     _ -> throwError (InvalidTripStatus "IN_PROGRESS")
-  FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId True
+  FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId DVehCategory.BUS True
   tripTransaction <- WMB.assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber destinationStopInfo req.location
   pure $
     TripTransactionDetails
@@ -211,17 +213,20 @@ postWmbTripStart ::
     API.Types.UI.WMB.TripStartReq ->
     Flow APISuccess
   )
-postWmbTripStart (_, _, _) tripTransactionId req = do
-  tripTransaction <- QTT.findByTransactionId tripTransactionId >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
+postWmbTripStart (mbDriverId, _, _) tripTransactionId req = do
+  driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
+  tripTransaction <-
+    WMB.findNextActiveTripTransaction driverId
+      >>= \case
+        Nothing -> throwError $ TripTransactionNotFound tripTransactionId.getId
+        Just tripTransaction -> do
+          unless (tripTransactionId == tripTransaction.id && tripTransaction.status == TRIP_ASSIGNED) $ throwError AlreadyOnActiveTrip
+          return tripTransaction
   WMB.checkFleetDriverAssociation tripTransaction.driverId tripTransaction.fleetOwnerId >>= \isAssociated -> unless isAssociated (throwError $ DriverNotLinkedToFleet tripTransaction.driverId.getId)
   closestStop <- WMB.findClosestStop tripTransaction.routeCode req.location >>= fromMaybeM (StopNotFound)
   route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
   (_, destinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route tripTransaction.routeCode
-  let busTripInfo = WMB.buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode destinationStopInfo.point
-  void $ LF.rideStart (cast tripTransaction.id) req.location.lat req.location.lon tripTransaction.merchantId tripTransaction.driverId (Just busTripInfo)
-  now <- getCurrentTime
-  QTT.updateOnStart (Just closestStop.tripCode) (Just closestStop.stopCode) (Just req.location) IN_PROGRESS (Just now) tripTransactionId
-  TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId IN_PROGRESS "Ride Started" "Your ride has started" EmptyDynamicParam
+  void $ WMB.startTripTransaction tripTransaction route closestStop (LatLong req.location.lat req.location.lon) destinationStopInfo.point True
   pure Success
 
 postWmbTripEnd ::
@@ -237,7 +242,6 @@ postWmbTripEnd (person, _, _) tripTransactionId req = do
   driverId <- fromMaybeM (DriverNotFoundWithId) person
   fleetDriverAssociation <- FDV.findByDriverId driverId True >>= fromMaybeM (NoActiveFleetAssociated driverId.getId)
   tripTransaction <- QTT.findByTransactionId tripTransactionId >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
-  when (tripTransaction.status == COMPLETED) $ throwError (InvalidTripStatus "COMPLETED")
   route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
   fleetConfig <- QFC.findByPrimaryKey (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetDriverAssociation.fleetOwnerId)
   let distanceLeft = KU.distanceBetweenInMeters req.location route.endPoint
@@ -264,8 +268,16 @@ postWmbTripEnd (person, _, _) tripTransactionId req = do
                 }
           requestTitle = "Your trip has ended!"
           requestBody = "You reached your end stop of this route."
-      driverReq <- createDriverRequest driverId fleetDriverAssociation.fleetOwnerId requestTitle requestBody requestData tripTransaction
-      pure $ TripEndResp {requestId = Just driverReq.id.getId, result = WAITING_FOR_ADMIN_APPROVAL}
+      Redis.whenWithLockRedisAndReturnValue
+        (WMB.tripTransactionKey driverId COMPLETED)
+        60
+        ( do
+            unless (tripTransaction.status == IN_PROGRESS) $ throwError (InvalidTripStatus $ show tripTransaction.status)
+            createDriverRequest driverId fleetDriverAssociation.fleetOwnerId requestTitle requestBody requestData tripTransaction
+        )
+        >>= \case
+          Right driverReq -> return $ TripEndResp {requestId = Just driverReq.id.getId, result = WAITING_FOR_ADMIN_APPROVAL}
+          Left _ -> throwError (InternalError "Process for Trip End is Already Ongoing, Please try again!")
     else do
       void $ endTripTransaction fleetConfig tripTransaction req.location DriverDirect
       pure $ TripEndResp {requestId = Nothing, result = SUCCESS}
@@ -356,11 +368,11 @@ postFleetConsent ::
 postFleetConsent (mbDriverId, _, merchantOperatingCityId) = do
   driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-
   fleetDriverAssociation <- FDV.findByDriverId driverId False >>= fromMaybeM (InactiveFleetDriverAssociationNotFound driverId.getId)
+  onboardingVehicleCategory <- fleetDriverAssociation.onboardingVehicleCategory & fromMaybeM DriverOnboardingVehicleCategoryNotFound
   fleetOwner <- QPerson.findById (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (FleetOwnerNotFound fleetDriverAssociation.fleetOwnerId)
   FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
-
+  QDriverInfoInternal.updateOnboardingVehicleCategory (Just onboardingVehicleCategory) driver.id
   QDI.updateEnabledVerifiedState driverId True (Just True)
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "FLEET_CONSENT" Nothing Nothing driver.language
   whenJust mbMerchantPN $ \merchantPN -> do

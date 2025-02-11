@@ -13,6 +13,7 @@ import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.ParcelDetails
 import qualified Domain.Types.Person
 import qualified Domain.Types.Quote
 import qualified Domain.Types.ServiceTierType
@@ -23,6 +24,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
+import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
 
 data Booking = Booking
@@ -36,6 +38,7 @@ data Booking = Booking
     clientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,
     clientId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Client.Client),
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap],
     createdAt :: Kernel.Prelude.UTCTime,
     disabilityTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     discount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
@@ -54,8 +57,10 @@ data Booking = Booking
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isBookingUpdated :: Kernel.Prelude.Bool,
     isDashboardRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isDeleted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isReferredRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,
+    isSkipped :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyLegOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
@@ -100,7 +105,13 @@ data BookingDetails
   | DeliveryDetails Domain.Types.Booking.DeliveryBookingDetails
   deriving (Show)
 
-data DeliveryBookingDetails = DeliveryBookingDetails {distance :: Kernel.Types.Common.Distance, otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, toLocation :: Domain.Types.Location.Location}
+data DeliveryBookingDetails = DeliveryBookingDetails
+  { distance :: Kernel.Types.Common.Distance,
+    otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    parcelQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    parcelType :: Domain.Types.ParcelDetails.ParcelType,
+    toLocation :: Domain.Types.Location.Location
+  }
   deriving (Generic, Show)
 
 data InterCityBookingDetails = InterCityBookingDetails

@@ -86,6 +86,7 @@ let smsConfig =
         { username = common.smsUserName
         , password = common.smsPassword
         , otpHash = sec.smsOtpHash
+        , token = None Text
         }
       , useFakeSms = Some 7891
       , url = "http://localhost:4343"
@@ -225,6 +226,7 @@ let AllocatorJobType =
       | QuarterlyUpdateTag
       | WeeklyUpdateTag
       | FleetAlert
+      | SendWebhookToExternal
       >
 
 let jobInfoMapx =
@@ -266,6 +268,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.QuarterlyUpdateTag, mapValue = True }
       , { mapKey = AllocatorJobType.WeeklyUpdateTag, mapValue = True }
       , { mapKey = AllocatorJobType.FleetAlert, mapValue = False }
+      , { mapKey = AllocatorJobType.SendWebhookToExternal, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }

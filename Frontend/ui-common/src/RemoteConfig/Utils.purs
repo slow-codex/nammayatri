@@ -72,6 +72,7 @@ defaultCityRemoteConfig defaultValue =
   , bhubaneshwar : Just defaultValue
   , bhubaneswar : Just defaultValue
   , cuttack : Just defaultValue
+  , nalgonda : Just defaultValue
   , puri : Just defaultValue
   , pudukkottai : Just defaultValue
   , bidar : Just defaultValue
@@ -193,6 +194,7 @@ getCityBasedConfig config city = case city of
   "bhubaneshwar" -> fromMaybe config.default config.bhubaneswar
   "bhubaneswar" -> fromMaybe config.default config.bhubaneswar
   "cuttack" -> fromMaybe config.default config.cuttack
+  "nalgonda" -> fromMaybe config.default config.nalgonda
   "puri" -> fromMaybe config.default config.puri
   "pudukkottai" -> fromMaybe config.default config.pudukkottai
   "bidar" -> fromMaybe config.default config.bidar
@@ -224,12 +226,18 @@ tipConfigData city variant = do
         "SUV" -> config.suv
         "HATCHBACK" -> config.hatchback
         "AUTO_RICKSHAW" -> config.autoRickshaw
+        "EV_AUTO_RICKSHAW" -> config.evAutoRickshaw
         "TAXI" -> config.taxi
         "TAXI_PLUS" -> config.taxiPlus
         "BIKE" -> config.bike
         "BOOK_ANY" -> config.bookAny
         "SUV_PLUS" -> config.suv
         "DELIVERY_BIKE" -> config.deliveryBike
+        "AMBULANCE_AC" -> config.ambulanceAc
+        "AMBULANCE_AC_OXY" -> config.ambulanceAcOxy
+        "AMBULANCE_VENTILATOR" -> config.ambulanceVentilator
+        "AMBULANCE_TAXI" -> config.ambulanceTaxi
+        "AMBULANCE_TAXI_OXY" -> config.ambulanceTaxiOxy
         _ -> config.default
 
 defaultTipsConfig :: TipsConfig
@@ -243,6 +251,12 @@ defaultTipsConfig =
   , bike : Nothing
   , bookAny: Nothing
   , deliveryBike: Nothing
+  , ambulanceTaxi : Nothing
+  , ambulanceTaxiOxy : Nothing
+  , ambulanceAc : Nothing
+  , ambulanceAcOxy : Nothing
+  , ambulanceVentilator : Nothing
+  , evAutoRickshaw: Nothing
   , default: Nothing
   }
 
@@ -257,6 +271,12 @@ defaultSubscriptionsConfigVariantLevel =
   , taxiPlus: Nothing
   , bookAny: Nothing
   , deliveryBike: Nothing
+  , ambulanceTaxi : Nothing
+  , ambulanceTaxiOxy : Nothing
+  , ambulanceAc : Nothing
+  , ambulanceAcOxy : Nothing
+  , ambulanceVentilator : Nothing
+  , evAutoRickshaw: Nothing
   , default: Nothing
   }
 
@@ -344,10 +364,16 @@ subscriptionsConfigVariantLevel city variant = do
         "SUV" -> config.suv
         "HATCHBACK" -> config.hatchback
         "AUTO_RICKSHAW" -> config.autoRickshaw
+        "EV_AUTO_RICKSHAW" -> config.evAutoRickshaw
         "TAXI" -> config.taxi
         "TAXI_PLUS" -> config.taxiPlus
         "BOOK_ANY" -> config.bookAny
         "DELIVERY_BIKE" -> config.deliveryBike
+        "AMBULANCE_AC" -> config.ambulanceAc
+        "AMBULANCE_AC_OXY" -> config.ambulanceAcOxy
+        "AMBULANCE_VENTILATOR" -> config.ambulanceVentilator
+        "AMBULANCE_TAXI" -> config.ambulanceTaxi
+        "AMBULANCE_TAXI_OXY" -> config.ambulanceTaxiOxy
         _ -> config.default
 
 defaultGullakConfig :: GullakConfig
@@ -449,10 +475,16 @@ getConfigForVariant variant config =
     "SUV" -> config.suv
     "HATCHBACK" -> config.hatchback
     "AUTO_RICKSHAW" -> config.autoRickshaw
+    "EV_AUTO_RICKSHAW" -> config.evAutoRickshaw
     "TAXI" -> config.taxi
     "TAXI_PLUS" -> config.taxiPlus
     "BOOK_ANY" -> config.bookAny
     "DELIVERY_BIKE" -> config.deliveryBike
+    "AMBULANCE_AC" -> config.ambulanceAc
+    "AMBULANCE_AC_OXY" -> config.ambulanceAcOxy
+    "AMBULANCE_VENTILATOR" -> config.ambulanceVentilator
+    "AMBULANCE_TAXI" -> config.ambulanceTaxi
+    "AMBULANCE_TAXI_OXY" -> config.ambulanceTaxiOxy
     _ -> config.default
       
 getInvoiceConfig :: String -> String -> InvoiceConfig
@@ -476,5 +508,11 @@ defaultInvoiceVariantConfig =
   , taxiPlus: Nothing
   , bookAny: Nothing
   , deliveryBike: Nothing
+  , ambulanceTaxi : Nothing
+  , ambulanceTaxiOxy : Nothing
+  , ambulanceAc : Nothing
+  , ambulanceAcOxy : Nothing
+  , ambulanceVentilator : Nothing
+  , evAutoRickshaw: Nothing
   , default: Nothing
   }

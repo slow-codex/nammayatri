@@ -3,11 +3,16 @@
 module Lib.JourneyLeg.Taxi where
 
 import qualified API.UI.Select as DSelect
+import qualified API.UI.Select as Select
+import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
 import qualified Data.Text as T
+import Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Search as DSearch
 import Domain.Types.Booking
+import qualified Domain.Types.CancellationReason as SCR
+import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.ServiceTierType
 import Kernel.External.Maps.Types
 import Kernel.Prelude
@@ -19,9 +24,11 @@ import Lib.JourneyLeg.Types.Taxi
 import qualified Lib.JourneyModule.Types as JT
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import qualified SharedLogic.CreateFareForMultiModal as CFFM
 import SharedLogic.Search
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 
@@ -41,6 +48,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
         parentSearchReq.device
         False
         (Just journeySearchData)
+    QJourneyLeg.updateDistanceAndDuration (convertMetersToDistance Meter <$> dSearchRes.distance) dSearchRes.duration journeyLegData.id
     fork "search cabs" . withShortRetry $ do
       becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
       let generatedJson = encode becknTaxiReqV2
@@ -79,28 +87,33 @@ instance JT.JourneyLeg TaxiLegRequest m where
             agency = journeyLegData.agency <&> (.name),
             skipBooking = False,
             convenienceCost = 0,
-            pricingId = Nothing
+            pricingId = Nothing,
+            isDeleted = Just False
           }
   search _ = throwError (InternalError "Not Supported")
 
   confirm (TaxiLegRequestConfirm req) = do
     now <- getCurrentTime
-    let shouldSkipBooking = req.skipBooking || (floor (diffUTCTime req.startTime now) :: Integer) >= 300 -- 5 minutes buffer
+    let shouldSkipBooking = req.skipBooking || (floor (diffUTCTime req.startTime now) :: Integer) >= 300 || req.forcedBooked -- 5 minutes buffer
     unless shouldSkipBooking $ do
-      estimateId <- req.estimateId & fromMaybeM (InvalidRequest "You can't confrim taxi before getting the fare")
-      let selectReq =
-            DSelect.DSelectReq
-              { customerExtraFee = Nothing,
-                customerExtraFeeWithCurrency = Nothing,
-                autoAssignEnabled = True,
-                autoAssignEnabledV2 = Just True,
-                paymentMethodId = Nothing,
-                otherSelectedEstimates = Nothing,
-                isAdvancedBookingEnabled = Nothing,
-                deliveryDetails = Nothing,
-                disabilityDisable = Nothing
-              }
-      void $ DSelect.select2' (req.personId, req.merchantId) estimateId selectReq
+      mbEstimate <- maybe (pure Nothing) QEstimate.findById req.estimateId
+      case mbEstimate of
+        Just estimate -> do
+          when (estimate.status == DEstimate.NEW) $ do
+            let selectReq =
+                  DSelect.DSelectReq
+                    { customerExtraFee = Nothing,
+                      customerExtraFeeWithCurrency = Nothing,
+                      autoAssignEnabled = True,
+                      autoAssignEnabledV2 = Just True,
+                      paymentMethodId = Nothing,
+                      otherSelectedEstimates = Nothing,
+                      isAdvancedBookingEnabled = Nothing,
+                      deliveryDetails = Nothing,
+                      disabilityDisable = Nothing
+                    }
+            void $ DSelect.select2' (req.personId, req.merchantId) estimate.id selectReq
+        Nothing -> CFFM.setConfirmOnceGetFare req.searchId
   confirm _ = throwError (InternalError "Not Supported")
 
   update (TaxiLegRequestUpdate _taxiLegUpdateRequest) = return ()
@@ -128,30 +141,80 @@ instance JT.JourneyLeg TaxiLegRequest m where
   --     newEstimatedPrice <- price1 `addPrice` newEstimate.estimatedTotalFare
   --     QJourney.updateEstimatedFare (Just newEstimatedPrice) (Id journeyId)
 
-  cancel (TaxiLegRequestCancel _legData) = return ()
-  cancel _ = throwError (InternalError "Not Supported")
-
-  isCancellable ((TaxiLegRequestIsCancellable _legData)) = return $ JT.IsCancellableResponse {canCancel = False}
-  isCancellable _ = throwError (InternalError "Not Supported")
-
-  getState (TaxiLegRequestGetState req) = do
-    mbBooking <- QBooking.findByTransactionIdAndStatus req.searchId.getId activeBookingStatus
+  cancel (TaxiLegRequestCancel legData) = do
+    mbBooking <- QBooking.findByTransactionId legData.searchRequestId.getId
     case mbBooking of
       Just booking -> do
         mbRide <- QRide.findByRBId booking.id
-        let journeyLegStatus = JT.getTexiLegStatusFromBooking booking mbRide
+        let cancelReq =
+              DCancel.CancelReq
+                { reasonCode = legData.reasonCode,
+                  reasonStage = SCR.OnAssign,
+                  additionalInfo = legData.additionalInfo,
+                  reallocate = legData.reallocate,
+                  blockOnCancellationRate = legData.blockOnCancellationRate
+                }
+        dCancelRes <- DCancel.cancel booking mbRide cancelReq legData.cancellationSource
+        void $ withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes cancelReq.reallocate
+        if legData.isSkipped then QBooking.updateisSkipped booking.id (Just True) else QBooking.updateIsCancelled booking.id (Just True)
+      Nothing -> do
+        searchReq <- QSearchRequest.findById legData.searchRequestId >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legData.searchRequestId.getId)
+        journeySearchData <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest $ "JourneySearchData not found for search id: " <> searchReq.id.getId)
+        case journeySearchData.pricingId of
+          Just pricingId -> do
+            cancelResponse <- Select.cancelSearch' (searchReq.riderId, searchReq.merchantId) (Id pricingId)
+            case cancelResponse of
+              DSelect.Success -> return ()
+              DSelect.BookingAlreadyCreated -> throwError (InternalError $ "Cannot cancel search as booking is already created for searchId: " <> show searchReq.id.getId)
+              DSelect.FailedToCancel -> throwError (InvalidRequest $ "Failed to cancel search for searchId: " <> show searchReq.id.getId)
+          Nothing -> return ()
+        if legData.isSkipped then QSearchRequest.updateSkipBooking legData.searchRequestId (Just True) else QSearchRequest.updateIsCancelled legData.searchRequestId (Just True)
+    if legData.isSkipped then QJourneyLeg.updateIsSkipped (Just True) (Just legData.searchRequestId.getId) else QJourneyLeg.updateIsDeleted (Just True) (Just legData.searchRequestId.getId)
+  cancel _ = throwError (InternalError "Not Supported")
+
+  isCancellable ((TaxiLegRequestIsCancellable legData)) = do
+    mbBooking <- QBooking.findByTransactionId legData.searchId.getId
+    case mbBooking of
+      Just booking -> do
+        mbRide <- QRide.findByRBId booking.id
+        canCancel <- DCancel.isBookingCancellable booking mbRide
+        return $ JT.IsCancellableResponse {canCancel}
+      Nothing -> do
+        return $ JT.IsCancellableResponse {canCancel = True}
+  isCancellable _ = throwError (InternalError "Not Supported")
+
+  getState (TaxiLegRequestGetState req) = do
+    mbBooking <- QBooking.findByTransactionIdAndStatus req.searchId.getId (activeBookingStatus <> [COMPLETED])
+    case mbBooking of
+      Just booking -> do
+        mbRide <- QRide.findByRBId booking.id
+        (journeyLegStatus, vehiclePosition) <- JT.getTaxiLegStatusFromBooking booking mbRide
         journeyLegOrder <- booking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
-        return $ JT.JourneyLegState {status = journeyLegStatus, currentPosition = Nothing, legOrder = journeyLegOrder, statusChanged = False}
+        return $
+          JT.JourneyLegState
+            { status = journeyLegStatus,
+              userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
+              vehiclePosition,
+              legOrder = journeyLegOrder,
+              statusChanged = False
+            }
       Nothing -> do
         searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
         journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
         mbEstimate <- maybe (pure Nothing) (QEstimate.findById . Id) journeyLegInfo.pricingId
-        let journeyLegStatus = JT.getTexiLegStatusFromSearch journeyLegInfo (mbEstimate <&> (.status))
-        return $ JT.JourneyLegState {status = journeyLegStatus, currentPosition = Nothing, legOrder = journeyLegInfo.journeyLegOrder, statusChanged = False}
+        let journeyLegStatus = JT.getTaxiLegStatusFromSearch journeyLegInfo (mbEstimate <&> (.status))
+        return $
+          JT.JourneyLegState
+            { status = journeyLegStatus,
+              userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
+              vehiclePosition = Nothing,
+              legOrder = journeyLegInfo.journeyLegOrder,
+              statusChanged = False
+            }
   getState _ = throwError (InternalError "Not Supported")
 
   getInfo (TaxiLegRequestGetInfo req) = do
-    mbBooking <- QBooking.findByTransactionIdAndStatus req.searchId.getId activeBookingStatus
+    mbBooking <- QBooking.findByTransactionIdAndStatus req.searchId.getId (activeBookingStatus <> [COMPLETED])
     case mbBooking of
       Just booking -> do
         mRide <- QRide.findByRBId booking.id

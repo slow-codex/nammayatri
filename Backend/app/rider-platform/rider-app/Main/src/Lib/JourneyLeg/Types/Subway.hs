@@ -25,6 +25,7 @@ data SubwayLegRequestUpdateData = SubwayLegRequestUpdateData
 
 data SubwayLegRequestConfirmData = SubwayLegRequestConfirmData
   { quoteId :: Maybe (Id FRFSQuote),
+    searchId :: Id FRFSSearch.FRFSSearch,
     skipBooking :: Bool,
     bookingAllowed :: Bool,
     personId :: Id DPerson.Person,
@@ -39,12 +40,14 @@ data SubwayLegRequestIsCancellableData = SubwayLegRequestIsCancellableData
 data SubwayLegRequestGetStateData = SubwayLegRequestGetStateData
   { searchId :: Id FRFSSearch.FRFSSearch,
     riderLastPoints :: [ApiTypes.RiderLocationReq],
-    isLastJustCompleted :: Bool
+    isLastCompleted :: Bool
   }
 
 data SubwayLegRequestGetInfoData = SubwayLegRequestGetInfoData
   { searchId :: Id FRFSSearch.FRFSSearch,
-    fallbackFare :: Maybe HighPrecMoney
+    fallbackFare :: Maybe HighPrecMoney,
+    distance :: Maybe Distance,
+    duration :: Maybe Seconds
   }
 
 data SubwayLegRequest
@@ -59,5 +62,10 @@ data SubwayLegRequest
 
 data SubwayLegRequestGetFareData = SubwayLegRequestGetFareData
   { startLocation :: LatLngV2,
-    endLocation :: LatLngV2
+    endLocation :: LatLngV2,
+    routeCode :: Text,
+    startStopCode :: Text,
+    endStopCode :: Text,
+    merchant :: DMerchant.Merchant,
+    merchantOpCity :: DMOC.MerchantOperatingCity
   }

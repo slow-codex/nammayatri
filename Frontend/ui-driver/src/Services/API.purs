@@ -487,6 +487,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , subscriptionEnabledForVehicleCategory :: Maybe Boolean
     , isSubscriptionEnabledAtCategoryLevel :: Maybe Boolean
     , isSpecialLocWarrior :: Maybe Boolean
+    , subscriptionDown :: Maybe Boolean
     }
 
 
@@ -845,7 +846,7 @@ instance showRidesInfo :: Show RidesInfo where show = genericShow
 instance decodeRidesInfo :: Decode RidesInfo where decode = defaultDecode
 instance encodeRidesInfo :: Encode RidesInfo where encode = defaultEncode
 
-data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS | DELIVERY_LIGHT_GOODS_VEHICLE | BUS_NON_AC | BUS_AC
+data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR_ | SUV_PLUS | DELIVERY_LIGHT_GOODS_VEHICLE | BUS_NON_AC | BUS_AC | EV_AUTO_VARIANT
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance showVehicleVariant :: Show VehicleVariant where show = genericShow
@@ -862,11 +863,12 @@ instance standardEncodeVehicleVariant :: StandardEncode VehicleVariant
  standardEncode AMBULANCE_TAXI_OXY = standardEncode {}
  standardEncode AMBULANCE_AC = standardEncode {}
  standardEncode AMBULANCE_AC_OXY = standardEncode {}
- standardEncode AMBULANCE_VENTILATOR = standardEncode {}
+ standardEncode AMBULANCE_VENTILATOR_ = standardEncode {}
  standardEncode SUV_PLUS = standardEncode {}
  standardEncode DELIVERY_LIGHT_GOODS_VEHICLE = standardEncode {}
  standardEncode BUS_NON_AC = standardEncode {}
  standardEncode BUS_AC = standardEncode {}
+ standardEncode EV_AUTO_VARIANT = standardEncode {}
 
 data Status = NEW | INPROGRESS | COMPLETED | CANCELLED | NOTHING | UPCOMING
 
@@ -4410,6 +4412,12 @@ data ServiceTierType
   | BIKE_TIER
   | SUV_PLUS_TIER
   | DELIVERY_BIKE
+  | AMBULANCE_TAXI_TIER
+  | AMBULANCE_TAXI_OXY_TIER
+  | AMBULANCE_AC_TIER
+  | AMBULANCE_AC_OXY_TIER
+  | AMBULANCE_VENTILATOR
+  | EV_AUTO_RICKSHAW
 
 data AirConditionedRestrictionType
   = ToggleAllowed
@@ -4472,6 +4480,12 @@ instance decodeServiceTierType :: Decode ServiceTierType
                   "BIKE"         -> except $ Right BIKE_TIER
                   "SUV_PLUS"     -> except $ Right SUV_PLUS_TIER
                   "DELIVERY_BIKE" -> except $ Right DELIVERY_BIKE
+                  "AMBULANCE_TAXI" -> except $ Right AMBULANCE_TAXI_TIER
+                  "AMBULANCE_TAXI_OXY" -> except $ Right AMBULANCE_TAXI_OXY_TIER
+                  "AMBULANCE_AC" -> except $ Right AMBULANCE_AC_TIER
+                  "AMBULANCE_AC_OXY" -> except $ Right AMBULANCE_AC_OXY_TIER
+                  "AMBULANCE_VENTILATOR" -> except $ Right AMBULANCE_VENTILATOR
+                  "EV_AUTO_RICKSHAW" -> except $ Right EV_AUTO_RICKSHAW
                   _              -> except $ Right COMFY
 instance encodeServiceTierType :: Encode ServiceTierType where encode = defaultEnumEncode
 instance eqServiceTierType :: Eq ServiceTierType where eq = genericEq
@@ -4491,6 +4505,12 @@ instance standardEncodeServiceTierType :: StandardEncode ServiceTierType
     standardEncode RENTALS = standardEncode "RENTALS"
     standardEncode INTERCITY = standardEncode "INTERCITY"
     standardEncode SUV_PLUS_TIER = standardEncode "SUV_PLUS"
+    standardEncode AMBULANCE_TAXI_TIER = standardEncode "AMBULANCE_TAXI"
+    standardEncode AMBULANCE_TAXI_OXY_TIER = standardEncode "AMBULANCE_TAXI_OXY"
+    standardEncode AMBULANCE_AC_TIER = standardEncode "AMBULANCE_AC"
+    standardEncode AMBULANCE_AC_OXY_TIER = standardEncode "AMBULANCE_AC_OXY"
+    standardEncode AMBULANCE_VENTILATOR = standardEncode "AMBULANCE_VENTILATOR"
+    standardEncode EV_AUTO_RICKSHAW = standardEncode "EV_AUTO_RICKSHAW"
 
 derive instance genericAirConditionedRestrictionType :: Generic AirConditionedRestrictionType _
 instance showAirConditionedRestrictionType :: Show AirConditionedRestrictionType where show = genericShow

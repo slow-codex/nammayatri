@@ -3,10 +3,12 @@
 
 module Storage.Beam.Booking where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import qualified Domain.Types.Booking
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
+import qualified Domain.Types.DeliveryDetails
 import qualified Domain.Types.Trip
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -23,6 +25,7 @@ data BookingT f = BookingT
     bapCountry :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.Country),
     bapId :: B.C f Kernel.Prelude.Text,
     bapUri :: B.C f Kernel.Prelude.Text,
+    configInExperimentVersions :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Currency),
     disabilityTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -46,6 +49,8 @@ data BookingT f = BookingT
     isScheduled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     maxEstimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    parcelQuantity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    parcelType :: B.C f (Kernel.Prelude.Maybe Domain.Types.DeliveryDetails.ParcelType),
     paymentId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

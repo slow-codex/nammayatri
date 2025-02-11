@@ -42,6 +42,14 @@ getMl = Keymap {
 , we_have_received_your_issue_well_reach_out_to_you_in_sometime: "ഞങ്ങൾക്ക് നിങ്ങളുടെ പ്രശ്നം ലഭിച്ചു. ഞങ്ങൾ എപ്പോഴെങ്കിലും നിങ്ങളിലേക്ക് എത്തിച്ചേരും."
 , go_to_home__: "വീട്ടിലേക്ക് പോകൂ"
 , subject: "വിഷയം"
+, verifying: "പരിശോധന നടക്കുന്നു"
+, referral_code_verified: "റഫറൽ കോഡ് പരിശോധന കഴിഞ്ഞു!"
+, referral_code_failed: "റഫറൽ കോഡ് പരാജയപ്പെട്ടു! ദയവായി പരിശോധിച്ച് വീണ്ടും ശ്രമിക്കുക"
+, enter_6_digit_referral_code: "6 അക്ക റഫറൽ കോഡ് നൽകുക"
+, not_verified: "പരിശോധന നടത്തപ്പെടാത്തത്"
+, optional_bracketted: "(ഐച്ഛികം)"
+, verify: "പരിശോധന നടത്തുക"
+, referral_code : "റഫറൽ കോഡ്"
 , your_email_id: "നിങ്ങളുടെ ഇമെയിൽ ഐഡി"
 , describe_your_issue: "നിങ്ങളുടെ പ്രശ്നം വിവരിക്കുക"
 , enter_mobile_number: "മൊബൈൽ നമ്പർ നൽകുക"
@@ -1280,6 +1288,8 @@ getMl = Keymap {
 , view_fares: "നിരക്കുകൾ കാണുക"
 , excess_time_description: (\charges -> "അധിക സമയം " <> charges <> " നിരക്കിൽ ഈടാക്കും")
 , estimated_charges: "കണക്കാക്കിയ നിരക്കുകൾ"
+, your_cancellation_rate_is_high: "നിങ്ങളുടെ റദ്ദാക്കൽ നിരക്ക് കൂടുതലാണ്!"
+, avoid_further_cancellations_to_keep_using_app: (\appName -> "ഉപയോഗിക്കുന്നത് തുടരാൻ കൂടുതൽ റദ്ദാക്കലുകൾ ഒഴിവാക്കുക " <> appName)
 , night_time_fees: "രാത്രിയിലെ സമയ ചാര്ജുകൾ"
 , parking_and_other_charges: "പാർക്കിംഗ് മറ്റ് ചാര്ജുകൾ"
 , additional_charges: "അതിരിക്കുന്ന ചാര്ജുകൾ"
@@ -1720,4 +1730,12 @@ getMl = Keymap {
 , experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> s <> " പ്രധാന റൂട്ടുകളിൽ ഞങ്ങളുടെ ബസ് ടിക്കറ്റിംഗ് പൈലറ്റ് ലോഞ്ച് അനുഭവിക്കുക. ഉടൻ കൂടുതൽ റൂട്ടുകൾ വരുന്നു!")
 , note_your_ticket_is_only_valid_for : (\s -> "ഗണ്യമായി: നിങ്ങളുടെ ടിക്കറ്റ് ബുക്കിംഗിന്റെ " <> s <> " വരെ മാത്രമാണ് സാധുവായിരിക്കുക. പ്രാദേശിക സാഹചര്യങ്ങൾ മൂലം ബസുകളുടെ സമയക്രമം മാറ്റമാകാം, അതിനാൽ നിങ്ങൾ ബുക്ക് ചെയ്യുമ്പോൾ സ്റ്റോപ്പിൽ സജ്ജമാകുക.")
 , here_is_bus_ticket : "ഇതാണ് നിങ്ങളുടെ ബസ് ടിക്കറ്റ്"
+,a_c : "അംഗീകരിക്കുക & തുടരുക"
+,no_oxygen :  "ആക്സിജൻ ഇല്ല"
+,oxygen  : "ആക്സിജൻ"
+,ventilator : "വെന്റിലേറ്റർ"
+,ambulance_ : "ആംബുലൻസ്"
+,uncomfortable_ambulance : "അസുഖകരമായ ആംബുലൻസ്"
+,clean_ambulance : "ശുചിത്വമായ ആംബുലൻസ്"
+,ambulance_booking_disclaimer : "യാത്രി സഹായി എംബുലൻസ് സേവാ പ്രദാതാക്കളെ ഉപഭോക്താക്കളുമായി ബന്ധിപ്പിക്കുന്ന ഒരു പ്ലാറ്റ്‌ഫോം മാത്രമാണ്. എംബുലൻസ് പാർട്ടി നൽകിയ വിവരങ്ങൾക്ക് ഞങ്ങൾ ഉത്തരവാദികളല്ല."
 }

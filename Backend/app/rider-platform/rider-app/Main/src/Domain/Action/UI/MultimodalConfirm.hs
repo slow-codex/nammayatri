@@ -10,19 +10,22 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalExtendLeg,
     postMultimodalJourneyLegSkip,
     getMultimodalJourneyStatus,
+    postMultimodalExtendLegGetfare,
+    postMultimodalJourneyFeedback,
+    getActiveJourneyIds,
   )
 where
 
 import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
--- import Domain.Types.Estimate
+import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Journey
-import qualified Domain.Types.JourneyLeg
+import qualified Domain.Types.JourneyFeedback as JFB
+import qualified Domain.Types.JourneyLegsFeedbacks as JLFB
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
--- import Domain.Types.SearchRequest
 import Environment
 import EulerHS.Prelude hiding (all, elem, find, forM_, id, map, sum, whenJust)
 import Kernel.Prelude
@@ -31,12 +34,17 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Interface as JLI
+import qualified Lib.JourneyLeg.Types as JL
 import Lib.JourneyModule.Base
 import qualified Lib.JourneyModule.Base as JM
 import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Storage.Queries.Estimate as QEstimate
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import Storage.Queries.Journey as QJourney
+import Storage.Queries.JourneyFeedback as SQJFB
+import Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.JourneyLegsFeedbacks as SQJLFB
 import Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 
@@ -51,18 +59,10 @@ postMultimodalInitiate (_personId, _merchantId) journeyId = do
   Redis.withLockRedisAndReturnValue lockKey 60 $ do
     addAllLegs journeyId
     journey <- JM.getJourney journeyId
+    JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
     legs <- JM.getAllLegsInfo journeyId
-    let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
-    let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
-    let mbCurrency = listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
-    return $
-      ApiTypes.JourneyInfoResp
-        { estimatedDuration = journey.estimatedDuration,
-          estimatedMinFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMinFareAmount,
-          estimatedMaxFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMaxFareAmount,
-          estimatedDistance = journey.estimatedDistance,
-          legs
-        }
+    now <- getCurrentTime
+    return $ generateJourneyInfoResponse journey legs now
   where
     lockKey = "infoLock-" <> journeyId.getId
 
@@ -71,11 +71,13 @@ postMultimodalConfirm ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalConfirm (_, _) journeyId = do
+postMultimodalConfirm (_, _) journeyId forcedBookLegOrder = do
   journey <- JM.getJourney journeyId
-  void $ JM.startJourney journey.id
+  void $ JM.startJourney forcedBookLegOrder journey.id
+  JM.updateJourneyStatus journey Domain.Types.Journey.CONFIRMED
   pure Kernel.Types.APISuccess.Success
 
 getMultimodalBookingInfo ::
@@ -88,17 +90,9 @@ getMultimodalBookingInfo ::
 getMultimodalBookingInfo (_personId, _merchantId) journeyId = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId
-  let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
-  let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
-  let mbCurrency = listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
-  return $
-    ApiTypes.JourneyInfoResp
-      { estimatedDuration = journey.estimatedDuration,
-        estimatedMinFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMinFareAmount,
-        estimatedMaxFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMaxFareAmount,
-        estimatedDistance = journey.estimatedDistance,
-        legs
-      }
+  now <- getCurrentTime
+  JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS -- fix it properly
+  return $ generateJourneyInfoResponse journey legs now
 
 getMultimodalBookingPaymentStatus ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -141,6 +135,7 @@ postMultimodalOrderSwitchTaxi ::
 postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId
+  now <- getCurrentTime
   journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   let mbPricingId = Id <$> journeyLegInfo.pricingId
   let legSearchId = Id journeyLegInfo.searchId
@@ -150,31 +145,71 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
   whenJust mbEstimate $ \estimate -> do
     when (estimate.status `elem` [DEst.COMPLETED, DEst.CANCELLED, DEst.GOT_DRIVER_QUOTE, DEst.DRIVER_QUOTE_CANCELLED]) $
       throwError $ InvalidRequest "Can't switch vehicle if driver has already being assigned"
-    when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ JLI.confirm journeyLegInfo{pricingId = Just req.estimateId.getId}
+    when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ JLI.confirm True journeyLegInfo{pricingId = Just req.estimateId.getId}
   updatedLegs <- JM.getAllLegsInfo journeyId
-  generateResponse journey updatedLegs
-  where
-    generateResponse journey updatedLegs = do
-      let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) updatedLegs
-      let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) updatedLegs
-      let mbCurrency = listToMaybe updatedLegs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
-      return $
-        ApiTypes.JourneyInfoResp
-          { estimatedDuration = journey.estimatedDuration,
-            estimatedMinFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMinFareAmount,
-            estimatedMaxFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMaxFareAmount,
-            estimatedDistance = journey.estimatedDistance,
-            legs = updatedLegs
-          }
+  return $ generateJourneyInfoResponse journey updatedLegs now
+
+getActiveJourneyIds ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    Monad m
+  ) =>
+  Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  m [Kernel.Types.Id.Id Domain.Types.Journey.Journey]
+getActiveJourneyIds riderId = do
+  activeJourneys <- QJourney.findAllActiveByRiderId riderId
+  return $ activeJourneys <&> (.id)
+
+generateJourneyInfoResponse :: Domain.Types.Journey.Journey -> [JMTypes.LegInfo] -> UTCTime -> ApiTypes.JourneyInfoResp
+generateJourneyInfoResponse journey legs now = do
+  let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
+  let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
+  let unifiedQR = getUnifiedQR legs now
+  let mbCurrency = listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
+  ApiTypes.JourneyInfoResp
+    { estimatedDuration = journey.estimatedDuration,
+      estimatedMinFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMinFareAmount,
+      estimatedMaxFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMaxFareAmount,
+      estimatedDistance = journey.estimatedDistance,
+      journeyStatus = journey.status,
+      legs,
+      unifiedQR,
+      startTime = journey.startTime,
+      endTime = journey.endTime
+    }
 
 postMultimodalSwitch ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
-  Kernel.Prelude.Text ->
+  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   ApiTypes.SwitchLegReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postMultimodalSwitch = do error "Logic yet to be decided"
+postMultimodalSwitch (_, _) journeyId req = do
+  journeyLegs <- JM.getJourneyLegs journeyId
+  remainingLegs <- JM.getRemainingLegs journeyId
+  journeyLeg <- find (\leg -> leg.sequenceNumber == req.legOrder) journeyLegs & fromMaybeM (InvalidRequest ("Journey Leg not Present" <> show req.legOrder))
+  legData <- find (\leg -> leg.order == req.legOrder) remainingLegs & fromMaybeM (InvalidRequest ("Journey Leg not Present" <> show req.legOrder))
+  canSwitch <- JM.canBeSwitched legData req.newMode
+  isCancellable <- JM.checkIfCancellable legData
+  if isCancellable
+    then do
+      if canSwitch
+        then do
+          isExtendLeg <- JM.isExtendable remainingLegs legData req.newMode
+          if not isExtendLeg
+            then do
+              JM.cancelLeg legData (SCR.CancellationReasonCode "") False
+              newJourneyLeg <- JM.createJourneyLegFromCancelledLeg journeyLeg req.newMode req.startLocation
+              QJourneyLeg.create newJourneyLeg
+              addAllLegs journeyId
+              when (legData.status /= JL.InPlan) $
+                fork "Start journey thread" $ withShortRetry $ startJourney Nothing journeyId
+            else throwError $ InvalidRequest "Call the Extend Leg" -- TODO : Call the Extend Leg API
+        else throwError $ JourneyLegCannotBeSwitched journeyLeg.id.getId
+    else throwError $ JourneyLegCannotBeCancelled journeyLeg.id.getId
+  pure Kernel.Types.APISuccess.Success
 
 postMultimodalRiderLocation ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -182,7 +217,7 @@ postMultimodalRiderLocation ::
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   ApiTypes.RiderLocationReq ->
-  Environment.Flow ApiTypes.JourneyStatus
+  Environment.Flow ApiTypes.JourneyStatusResp
 postMultimodalRiderLocation personOrMerchantId journeyId req = do
   addPoint journeyId req
   getMultimodalJourneyStatus personOrMerchantId journeyId
@@ -194,7 +229,9 @@ postMultimodalJourneyCancel ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMultimodalJourneyCancel (_, _) journeyId = do
-  _ <- JM.cancelRemainingLegs journeyId
+  journey <- JM.getJourney journeyId
+  void $ JM.cancelRemainingLegs journeyId
+  JM.updateJourneyStatus journey Domain.Types.Journey.CANCELLED
   pure Kernel.Types.APISuccess.Success
 
 postMultimodalExtendLeg ::
@@ -204,18 +241,30 @@ postMultimodalExtendLeg ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   ApiTypes.ExtendLegReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postMultimodalExtendLeg = do error "Logic yet to be decided"
+postMultimodalExtendLeg (_, _) journeyId req = do
+  JM.extendLeg journeyId req.startLocation req.endLocation Nothing req.fare req.distance req.duration
+  pure Kernel.Types.APISuccess.Success
+
+postMultimodalExtendLegGetfare ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+  ApiTypes.ExtendLegGetFareReq ->
+  Environment.Flow ApiTypes.ExtendLegGetFareResp
+postMultimodalExtendLegGetfare (_, _) journeyId req = do
+  JM.extendLegEstimatedFare journeyId req.startLocation req.endLocation Nothing
 
 postMultimodalJourneyLegSkip ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
-    Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg ->
+    Int ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalJourneyLegSkip (_, _) journeyId journeyLegId = do
-  _ <- JM.skipLeg journeyId journeyLegId
+postMultimodalJourneyLegSkip (_, _) journeyId legOrder = do
+  JM.skipLeg journeyId legOrder
   pure Kernel.Types.APISuccess.Success
 
 getMultimodalJourneyStatus ::
@@ -223,14 +272,50 @@ getMultimodalJourneyStatus ::
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
-  Environment.Flow ApiTypes.JourneyStatus
+  Environment.Flow ApiTypes.JourneyStatusResp
 getMultimodalJourneyStatus (_, _) journeyId = do
-  legs <- JM.getAllLegsStatus journeyId
-  return $ ApiTypes.JourneyStatus {legs = map transformLeg legs}
+  journey <- JM.getJourney journeyId
+  legs <- JM.getAllLegsStatus journey
+  return $ ApiTypes.JourneyStatusResp {legs = map transformLeg legs, journeyStatus = journey.status}
   where
     transformLeg :: JMTypes.JourneyLegState -> ApiTypes.LegStatus
     transformLeg legState =
       ApiTypes.LegStatus
         { legOrder = legState.legOrder,
-          status = legState.status
+          status = legState.status,
+          userPosition = legState.userPosition,
+          vehiclePosition = legState.vehiclePosition
         }
+
+postMultimodalJourneyFeedback :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> API.Types.UI.MultimodalConfirm.JourneyFeedBackForm -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postMultimodalJourneyFeedback (mbPersonId, mbMerchantId) journeyId journeyFeedbackForm = do
+  journey <- JM.getJourney journeyId
+  riderId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  now <- getCurrentTime
+  let mkJourneyfeedbackForm =
+        JFB.JourneyFeedback
+          { additionalFeedBack = journeyFeedbackForm.additionalFeedBack,
+            journeyId = journeyId,
+            rating = journeyFeedbackForm.rating,
+            riderId = riderId,
+            merchantId = Just mbMerchantId,
+            merchantOperatingCityId = journey.merchantOperatingCityId,
+            createdAt = now,
+            updatedAt = now
+          }
+
+      mkJourneyLegsFeedback feedbackEntry =
+        JLFB.JourneyLegsFeedbacks
+          { isExperienceGood = feedbackEntry.isExperienceGood,
+            journeyId = journeyId,
+            legOrder = feedbackEntry.legOrder,
+            merchantId = Just mbMerchantId,
+            merchantOperatingCityId = journey.merchantOperatingCityId,
+            createdAt = now,
+            updatedAt = now
+          }
+
+  SQJFB.create mkJourneyfeedbackForm
+  SQJLFB.createMany $ map mkJourneyLegsFeedback journeyFeedbackForm.rateTravelMode
+  JM.updateJourneyStatus journey Domain.Types.Journey.COMPLETED
+  pure Kernel.Types.APISuccess.Success

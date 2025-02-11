@@ -35,6 +35,7 @@ import Domain.Action.UI.DriverReferral
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverInformation as DriverInfo
+import qualified Domain.Types.Extra.Plan as DEP
 import qualified Domain.Types.Merchant as DO
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
@@ -65,7 +66,10 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -311,13 +315,30 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             softBlockReasonFlag = Nothing,
             softBlockStiers = Nothing,
             isBlockedForReferralPayout = Nothing,
-            onboardingVehicleCategory = Nothing
+            onboardingVehicleCategory = Nothing,
+            servicesEnabledForSubscription = [DEP.YATRI_SUBSCRIPTION]
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo
   pure ()
 
-makePerson :: EncFlow m r => AuthReq -> TC.TransporterConfig -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Maybe SP.Role -> m SP.Person
+makePerson ::
+  ( EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  AuthReq ->
+  TC.TransporterConfig ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
+  Maybe Text ->
+  Id DO.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Bool ->
+  Maybe SP.Role ->
+  m SP.Person
 makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOperatingCityId isDashboard mbRole = do
   pid <- BC.generateGUID
   now <- getCurrentTime
@@ -338,6 +359,7 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
             pure (Just email, Nothing, useFakeOtp)
           Nothing -> throwError $ InvalidRequest "Email is required"
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
+  safetyCohortNewTag <- Yudhishthira.fetchNammaTagExpiry $ LYT.TagNameValue "SafetyCohort#New"
   return $
     SP.Person
       { id = pid,
@@ -377,7 +399,7 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
         registrationLat = req.registrationLat,
         registrationLon = req.registrationLon,
         useFakeOtp,
-        driverTag = Just ["SafetyCohort#New"]
+        driverTag = Just [safetyCohortNewTag]
       }
 
 makeSession ::
@@ -429,7 +451,6 @@ createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersio
   person <- makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard Nothing
   void $ QP.create person
   createDriverDetails (person.id) merchantId merchantOpCityId transporterConfig
-  TM.notifyMarketingEvents (TM.PersonEntity person) TM.NEW_SIGNUP Nothing (TM.MerchantOperatingCityId merchantOpCityId) [TM.FIREBASE]
   pure person
 
 verify ::
@@ -437,7 +458,8 @@ verify ::
     EsqDBFlow m r,
     EncFlow m r,
     CacheFlow m r,
-    EsqDBReplicaFlow m r
+    EsqDBReplicaFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
@@ -455,6 +477,8 @@ verify tokenId req = do
 
   let isNewPerson = person.isNew
   let deviceToken = Just req.deviceToken
+  when (isNothing person.deviceToken) $ do
+    TM.notifyMarketingEvents person.id deviceToken TM.NEW_SIGNUP Nothing (TM.MerchantOperatingCityId (Id merchantOperatingCityId)) [TM.FIREBASE]
   cleanCachedTokens person.id
   QR.deleteByPersonIdExceptNew person.id tokenId
   _ <- QR.setVerified True tokenId

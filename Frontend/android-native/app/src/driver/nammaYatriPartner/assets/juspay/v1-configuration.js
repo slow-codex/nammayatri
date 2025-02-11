@@ -266,6 +266,100 @@ window.getMerchantConfig = function () {
         }
       },
       {
+        "cityName" : "Nalgonda",
+        "mapImage" : "ny_ic_location_map",
+        "cityCode" : "std:08682",
+        "showSubscriptions" : false,
+        "enableAdvancedBooking" : false,
+        "enableGullak": false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+        "callDriverInfoPost": false, // Dummy link need to change
+        "cityLat" : 17.055959610050486,
+        "cityLong" : 79.2698763801053,
+        "supportNumber" : "08069724900",
+        "languageKey" : "TE_IN",
+        "showScheduledRides" : false,
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image_old",
+        "registration" : {
+            "supportWAN" : "919392636637",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : true,
+          "variantList" : [],
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
+        },
+        "showEarningSection" : true,
+        "referral" : {
+            "domain" : "https://www.manayatri.in"
+          , "customerAppId" : "in.mobility.manayatri"
+          , "driverAppId" : "in.mobility.manayatripartner"
+        },
+        "waitingCharges" : 2.00,
+        "waitingChargesConfig" : {
+          "cab" : {
+            "freeSeconds" : 180,
+            "perMinCharges" : 2.0
+          },
+          "auto" : {
+            "freeSeconds" : 300,
+            "perMinCharges" : 2.0
+          },
+          "bike" : {
+            "freeSeconds" : 180,
+            "perMinCharges" : 2.0
+          },
+          "ambulance" : {
+            "freeSeconds" : 480,
+            "perMinCharges" : 2.0
+          }
+        },
+        "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+        "rateCardConfig" : defRateCardConfig,
+        "gstPercentage" :  "18",       
+        "assets" :{
+          "auto_image" :  "ny_ic_black_yellow_auto_side_view",
+          "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
+          "empty_referral_auto" : "ny_ic_refer_now_auto_my,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_my.png",
+          "empty_referral_cab" : "ny_ic_refer_now_cab_my,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_my.png"
+        },
+        "enableHvSdk" : true,
+        "purpleRideConfig" : {
+          "purpleRideConfigForAuto" : {
+            "vehicleVariant" : "Auto",
+            "showVideo" : false,
+            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
+            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
+          },
+          "purpleRideConfigForCabs" : {
+            "vehicleVariant" : "Cab",
+            "showVideo" : false,
+            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
+            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
+          },
+          "purpleRideConfigForBikes" : {
+            "vehicleVariant" : "Bike",
+            "showVideo" : false,
+            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
+            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
+          }
+        },
+        "rideStartAudio" : {
+          "acCab" : {
+            "parkingAudio" : "https://assets.moving.tech/beckn/audios/parking_charges_background/te.mp3",
+          },
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
+      },
+      {
         "cityName" : "Hyderabad",
         "mapImage" : "ny_ic_hyderabad_map",
         "cityCode" : "std:040",
@@ -313,6 +407,10 @@ window.getMerchantConfig = function () {
           },
           "bike" : {
             "freeSeconds" : 180,
+            "perMinCharges" : 2.0
+          },
+          "ambulance" : {
+            "freeSeconds" : 480,
             "perMinCharges" : 2.0
           }
         },
@@ -404,6 +502,10 @@ window.getMerchantConfig = function () {
           "bike" : {
             "freeSeconds" : 180,
             "perMinCharges" : 2.0
+          },
+          "ambulance" : {
+            "freeSeconds" : 480,
+            "perMinCharges" : 2.0
           }
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -492,6 +594,10 @@ window.getMerchantConfig = function () {
           },
           "bike" : {
             "freeSeconds" : 180,
+            "perMinCharges" : 2.0
+          },
+          "ambulance" : {
+            "freeSeconds" : 480,
             "perMinCharges" : 2.0
           }
         },
@@ -584,6 +690,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 180
         , "perMinCharges" : 2.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
@@ -671,6 +781,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -759,6 +873,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1349,7 +1467,7 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : true,
-          "variantList" : ["AutoCategory"],
+          "variantList" : [],
           "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
@@ -1447,6 +1565,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1535,6 +1657,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1623,6 +1749,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1711,6 +1841,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1799,6 +1933,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1887,6 +2025,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1975,6 +2117,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -2062,6 +2208,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -3045,6 +3195,10 @@ let defWaitingChargesConfig = {
     "bike" : {
       "freeSeconds" : 300,
       "perMinCharges" : 1.0
+    },
+    "ambulance" : {
+      "freeSeconds" : 480,
+      "perMinCharges" : 2.0
     }
   }
 
@@ -3060,6 +3214,10 @@ let defRentalWaitingChargesConfig = {
   },
   "bike" : {
     "freeSeconds" : 180,
+    "perMinCharges" : 2.0
+  },
+  "ambulance" : {
+    "freeSeconds" : 480,
     "perMinCharges" : 2.0
   }
 }

@@ -66,6 +66,7 @@ type RemoteConfig a
     , bhubaneshwar :: Maybe a
     , bhubaneswar :: Maybe a
     , cuttack :: Maybe a
+    , nalgonda :: Maybe a
     , bidar :: Maybe a
     , puri :: Maybe a
     , pudukkottai :: Maybe a
@@ -94,8 +95,14 @@ type VariantLevelRemoteConfig a =
       bookAny :: a,
       taxi :: a,
       taxiPlus :: a,
+      ambulanceTaxi :: a,
+      ambulanceTaxiOxy ::  a,
+      ambulanceAc ::  a,
+      ambulanceAcOxy ::  a,
+      ambulanceVentilator :: a,
       default :: a,
-      deliveryBike :: a
+      deliveryBike :: a,
+      evAutoRickshaw :: a
     }
 
 
@@ -126,6 +133,9 @@ derive instance genericRCCarousel :: Generic RCCarousel _
 instance decodeRCCarousel :: Decode RCCarousel where
   decode = defaultDecode
 
+instance encodeRCCarousel :: Encode RCCarousel where
+  encode = defaultEncode
+
 newtype Config
   = Config
   { randomOrder :: Boolean
@@ -135,6 +145,9 @@ derive instance genericConfig :: Generic Config _
 
 instance decodeConfig :: Decode Config where
   decode = defaultDecode
+
+instance encodeConfig :: Encode Config where
+  encode = defaultEncode
 
 
 newtype ForwardBatchConfigData = ForwardBatchConfigData
@@ -146,6 +159,9 @@ derive instance genericForwardBatchConfigData :: Generic ForwardBatchConfigData 
 
 instance decodeForwardBatchConfigData :: Decode ForwardBatchConfigData where
   decode = defaultDecode
+
+instance encodeForwardBatchConfigData :: Encode ForwardBatchConfigData where
+  encode = defaultEncode
 
 defaultForwardBatchConfigData :: ForwardBatchConfigData
 defaultForwardBatchConfigData = ForwardBatchConfigData
@@ -162,6 +178,9 @@ derive instance genericFeaturesConfigData :: Generic FeaturesConfigData _
 instance decodeFeaturesConfigData :: Decode FeaturesConfigData where
   decode = defaultDecode
 
+instance encodeFeaturesConfigData :: Encode FeaturesConfigData where
+  encode = defaultEncode
+
 defaultFeaturesConfigData :: FeaturesConfigData
 defaultFeaturesConfigData = FeaturesConfigData
   { enableDeliveryBike: false
@@ -177,7 +196,13 @@ type TipsConfig
       taxiPlus :: Maybe (Array Int),
       bike :: Maybe (Array Int),
       default :: Maybe (Array Int),
-      deliveryBike :: Maybe (Array Int)
+      deliveryBike :: Maybe (Array Int),
+      evAutoRickshaw :: Maybe (Array Int),
+      ambulanceTaxi :: Maybe (Array Int),
+      ambulanceTaxiOxy ::  Maybe (Array Int),
+      ambulanceAc ::  Maybe (Array Int),
+      ambulanceAcOxy ::  Maybe (Array Int),
+      ambulanceVentilator :: Maybe (Array Int)
     }
 
 type SubscriptionConfigVariantLevel 
@@ -238,7 +263,7 @@ type RCSubscriptionDues = {
   
 ---------------------------------Remote Config Dynamic AC-----------------------------------------------
 
-data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile | NoAction | Safety | ZooBooking | Rentals | Intercity | SafetyExplaination | SetupSafety | IntercityBus
+data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile | NoAction | Safety | ZooBooking | Rentals | Intercity | SafetyExplaination | SetupSafety | IntercityBus | AmbulanceBooking
 
 instance eqRemoteAC :: Eq RemoteAC where eq = genericEq
 instance encodeJsonRemoteAC :: EncodeJson RemoteAC where encodeJson = genericEncodeJson

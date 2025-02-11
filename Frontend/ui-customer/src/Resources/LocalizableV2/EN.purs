@@ -10,6 +10,14 @@ getEn = Keymap {
 , safety: "Safety"
 , download_invoice: "Download Invoice"
 , report_an_issue: "Report an Issue"
+, verifying: "Verifying"
+, referral_code_verified : "Referral Code Verified!"
+, referral_code_failed : "Referral Code Invalid! Please check and try again"
+, enter_6_digit_referral_code : "Enter 6 digit referral code"
+, not_verified: "Not Verified"
+, optional_bracketted: "(Optional)"
+, verify : "Verify"
+, referral_code : "Referral Code"
 , submit: "Submit"
 , view_invoice: "View Invoice"
 , total_amount: "Total Amount"
@@ -1282,6 +1290,8 @@ getEn = Keymap {
 , view_fares: "View Fares"
 , excess_time_description: (\charges -> "Excess time will be charged at " <> charges)
 , estimated_charges: "Estimated Charges"
+, your_cancellation_rate_is_high: "Your cancellation rate is high!"
+, avoid_further_cancellations_to_keep_using_app: (\appName -> "Avoid further cancellations to keep using " <> appName)
 , night_time_fees: "Night Time Fees"
 , parking_and_other_charges: "Parking and other charges"
 , additional_charges: "Additional Charges"
@@ -1719,4 +1729,12 @@ getEn = Keymap {
 , experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> "Experience our Pilot launch for bus ticketing in " <> s <> " prime routes. More coming soon!")
 , note_your_ticket_is_only_valid_for : (\s -> "Note: Ticket is valid for " <> s <> ". Bus times may vary due to local conditions, so be at the stop when booking")
 , here_is_bus_ticket : "Here is your bus ticket"
+,a_c : "Agree & Continue" 
+,no_oxygen :  "No Oxygen"
+,oxygen  : "Oxygen"
+,ventilator : "Ventilator"
+,ambulance_ : "Ambulance"
+,uncomfortable_ambulance : "Uncomfortable Ambulance"
+,clean_ambulance : "Clean Ambulance"
+,ambulance_booking_disclaimer : "Yatri Sathi is only a platform connecting the Ambulance Service Providers with Customers. We are not responsible for information provided by the ambulance party"
 }

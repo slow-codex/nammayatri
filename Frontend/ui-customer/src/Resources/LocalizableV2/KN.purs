@@ -38,6 +38,14 @@ getKn = Keymap {
 , please_choose_your_preferred_language_to_continue: "ಮುಂದುವರಿಯಲು ದಯವಿಟ್ಟು ನಿಮ್ಮ ಆದ್ಯತೆಯ ಭಾಷೆಯನ್ನು ಆರಿಸಿ."
 , write_to_us: "ನಮಗೆ ಬರೆಯಿರಿ"
 , note: "ಸೂಚನೆ: "
+, verifying: "ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ"
+, referral_code_verified: "ರೆಫರಲ್ ಕೋಡ್ ಪರಿಶೀಲಿಸಲಾಗಿದೆ!"
+, referral_code_failed : "ರೆಫರಲ್ ಕೋಡ್ ವಿಫಲವಾಗಿದೆ! ದಯವಿಟ್ಟು ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ"
+, enter_6_digit_referral_code : "6 ಅಂಕೆಯ ರೆಫರಲ್ ಕೋಡ್ ನಮೂದಿಸಿ"
+, not_verified : "ಪರಿಶೀಲನೆ ಮಾಡಲಾಗಿಲ್ಲ"
+, optional_bracketted: "(ಐಚ್ಛಿಕ)"
+, verify: "ಪರಿಶೀಲಿಸಿ"
+, referral_code : "ಉಲ್ಲೇಖಿತ ಕೋಡ್"
 , visit_my_rides_section_for_ride_specific_complaints: "ಸವಾರಿ ನಿರ್ದಿಷ್ಟ ದೂರುಗಳಿಗಾಗಿ ನನ್ನ ರೈಡ್ಸ್ ವಿಭಾಗಕ್ಕೆ ಭೇಟಿ ನೀಡಿ"
 , thank_you_for_writing_to_us: "ನಮಗೆ ಬರೆದಿದ್ದಕ್ಕಾಗಿ ಧನ್ಯವಾದಗಳು!"
 , we_have_received_your_issue_well_reach_out_to_you_in_sometime: "ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ನಾವು ಸ್ವೀಕರಿಸಿದ್ದೇವೆ. ನಾವು ಕೆಲವೊಮ್ಮೆ ನಿಮ್ಮನ್ನು ತಲುಪುತ್ತೇವೆ."
@@ -1279,6 +1287,8 @@ getKn = Keymap {
 , view_fares: "ದರಗಳನ್ನು ವೀಕ್ಷಿಸಿ"
 , excess_time_description: (\charges -> "ಹೆಚ್ಚುವರಿ ಸಮಯವನ್ನು " <> charges <> " ವಿಧಿಸಲಾಗುತ್ತದೆ")
 , estimated_charges: "ಅಂದಾಜು ಶುಲ್ಕಗಳು"
+, your_cancellation_rate_is_high: "ನಿಮ್ಮ ರದ್ದತಿ ದರ ಹೆಚ್ಚಾಗಿದೆ!"
+, avoid_further_cancellations_to_keep_using_app: (\appName -> appName <> " ಬಳಸುವುದನ್ನು ಮುಂದುವರಿಸಲು ಮುಂದಿನ ರದ್ದತಿಗಳನ್ನು ತಪ್ಪಿಸಿ.")
 , night_time_fees: "ರಾತ್ರಿ ಸಮಯ ಶುಲ್ಕಗಳು"
 , parking_and_other_charges: "ಪಾರ್ಕಿಂಗ್ ಮತ್ತು ಇತರ ವೆಚ್ಚಗಳು"
 , additional_charges: "ಅತಿಯಾದ ವೆಚ್ಚಗಳು"
@@ -1719,4 +1729,12 @@ getKn = Keymap {
 , experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> s <> " ಪ್ರಮುಖ ಮಾರ್ಗಗಳಲ್ಲಿ ನಮ್ಮ ಬಸ್ ಟಿಕೇಟಿಂಗ್ ಪೈಲಟ್ ಲಾಂಚ್ ಅನುಭವಿಸಿ. ಇನ್ನಷ್ಟು ಮಾರ್ಗಗಳು ಶೀಘ್ರದಲ್ಲೇ ಬರಲಿವೆ!")
 , note_your_ticket_is_only_valid_for : (\s -> "ಗಮನಿಸಿ: ನಿಮ್ಮ ಟಿಕೆಟ್ ಬುಕ್ಕಿಂಗ್‌ನ " <> s <> " ಗಳಿಗಷ್ಟೇ ಮಾನ್ಯವಾಗಿದೆ. ಸ್ಥಳೀಯ ಪರಿಸ್ಥಿತಿಗಳ ಪರಿಣಾಮವಾಗಿ ಬಸ್ಸುಗಳ ಸಮಯ ಬದಲಾಗಬಹುದು, ಆದ್ದರಿಂದ ನೀವು ಬುಕ್ ಮಾಡಿದಾಗ ನಿಲ್ದಾಣದಲ್ಲಿ ಸಿದ್ಧರಾಗಿರಿರಿ.")
 , here_is_bus_ticket : "ಇಲ್ಲಿ ಬಸ್ ಟಿಕೆಟ್ ಇದೆ"
+, a_c : "ಒಪ್ಪಿಗೆ ಮಾಡು & ಮುಂದುವರಿಸು"
+, no_oxygen : "ಆಕ್ಸಿಜನ್ ಇಲ್ಲ"
+, oxygen : "ಆಕ್ಸಿಜನ್"
+, ventilator : "ವೆಂಟಿಲೇಟರ್"
+, ambulance_ : "ಆಂಬುಲೆನ್ಸ್"
+, uncomfortable_ambulance : "ಅಸೌಕರ್ಯದ ಆಂಬುಲೆನ್ಸ್"
+, clean_ambulance : "ಸ್ವಚ್ಛವಾದ ಆಂಬುಲೆನ್ಸ್"
+, ambulance_booking_disclaimer : "ಯಾತ್ರಿ ಸಹಚರಿ ಒಂದು ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಮಾತ್ರ, ಇದು ಆಂಬ್ಯುಲೆನ್ಸ್ ಸೇವಾ ಪೂರೈಕೆದಾರರನ್ನು ಗ್ರಾಹಕರೊಂದಿಗೆ ಸಂಪರ್ಕಿಸುತ್ತದೆ. ನಾವು ಆಂಬ್ಯುಲೆನ್ಸ್ ಪಕ್ಷದಿಂದ ನೀಡಲಾಗುವ ಮಾಹಿತಿಗೆ ಜವಾಬ್ದಾರಿಯಿಲ್ಲ"
 }

@@ -5,6 +5,7 @@ module Domain.Types.Booking where
 
 import Data.Aeson
 import qualified Domain.Types.Common
+import qualified Domain.Types.DeliveryDetails
 import qualified Domain.Types.DeliveryPersonDetails
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.FareParameters
@@ -21,6 +22,7 @@ import qualified Kernel.Types.Id
 import qualified Kernel.Utils.Common
 import Kernel.Utils.TH
 import qualified Lib.Types.SpecialLocation
+import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
 
 data Booking = Booking
@@ -29,6 +31,7 @@ data Booking = Booking
     bapCountry :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.Country,
     bapId :: Kernel.Prelude.Text,
     bapUri :: Kernel.Prelude.Text,
+    configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap],
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Utils.Common.Currency,
     disabilityTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -52,6 +55,8 @@ data Booking = Booking
     isScheduled :: Kernel.Prelude.Bool,
     maxEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    parcelQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    parcelType :: Kernel.Prelude.Maybe Domain.Types.DeliveryDetails.ParcelType,
     paymentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentMethodId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod),
     paymentUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

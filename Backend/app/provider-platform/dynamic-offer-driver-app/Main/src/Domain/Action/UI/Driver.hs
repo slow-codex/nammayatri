@@ -102,7 +102,7 @@ import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8)
-import Data.Time (Day, addDays, defaultTimeLocale, diffDays, fromGregorian, parseTimeM)
+import Data.Time (defaultTimeLocale, parseTimeM)
 import qualified Data.Tuple.Extra as DTE
 import Domain.Action.Beckn.Search
 import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummyRideRequest)
@@ -119,6 +119,7 @@ import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Client as DC
+import Domain.Types.Common
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverBankAccount as DOBA
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
@@ -150,7 +151,6 @@ import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchRequestForDriver as DSRD
 import qualified Domain.Types.SearchTry as DST
-import Domain.Types.ServiceTierType
 import Domain.Types.TransporterConfig
 import Domain.Types.Vehicle (Vehicle (..), VehicleAPIEntity)
 import Domain.Types.VehicleCategory
@@ -208,6 +208,8 @@ import Lib.Payment.Domain.Types.PaymentTransaction
 import Lib.Payment.Storage.Queries.PaymentTransaction
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator (AllocatorJobType (..), ScheduledRideAssignedOnUpdateJobData (..))
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import SharedLogic.Booking
@@ -271,8 +273,7 @@ import Tools.Error
 import Tools.Event
 import qualified Tools.Payout as Payout
 import Tools.SMS as Sms hiding (Success)
-import qualified Tools.Utils as TU
-import Tools.Verification
+import Tools.Verification hiding (length)
 import Utils.Common.Cac.KeyNameConstants
 
 data DriverInformationRes = DriverInformationRes
@@ -909,9 +910,9 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) = do
               return False
             else return driverInfo.onRide
       else return driverInfo.onRide
-  let driverTags = TU.convertTags $ fromMaybe [] person.driverTag
-  let mbDriverSafetyTag = TU.accessKey "SafetyCohort" driverTags
-      mbDriverSafetyScore = TU.accessKey "SafetyScore" driverTags
+  let driverTags = Yudhishthira.convertTags $ fromMaybe [] person.driverTag
+  let mbDriverSafetyTag = Yudhishthira.accessTagKey (LYT.TagName "SafetyCohort") driverTags
+      mbDriverSafetyScore = Yudhishthira.accessTagKey (LYT.TagName "SafetyScore") driverTags
   return $
     DriverEntityRes
       { id = person.id,
@@ -1332,15 +1333,15 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       activeQuotes <- QDrQt.findActiveQuotesByDriverId driverId driverUnlockDelay
       logDebug $ "active quotes for driverId = " <> driverId.getId <> show activeQuotes
       pure $ not $ null activeQuotes
-    getQuoteLimit dist vehicleServiceTier tripCategory searchReq area = do
-      driverPoolCfg <- SCDPC.getDriverPoolConfig merchantOpCityId vehicleServiceTier tripCategory area dist (Just (TransactionId (Id searchReq.transactionId))) searchReq
+    getQuoteLimit dist vehicleServiceTier tripCategory searchReq area searchRepeatType searchRepeatCounter = do
+      driverPoolCfg <- SCDPC.getDriverPoolConfig merchantOpCityId vehicleServiceTier tripCategory area dist searchRepeatType searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
       pure driverPoolCfg.driverQuoteLimit
 
     acceptDynamicOfferDriverRequest :: DM.Merchant -> DST.SearchTry -> DSR.SearchRequest -> SP.Person -> SearchRequestForDriver -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe HighPrecMoney -> Flow [SearchRequestForDriver]
     acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion' mbClientVersion' mbConfigVersion' mbDevice' reqOfferedValue = do
       let estimateId = fromMaybe searchTry.estimateId sReqFD.estimateId -- backward compatibility
       logDebug $ "offered fare: " <> show reqOfferedValue
-      quoteLimit <- getQuoteLimit searchReq.estimatedDistance sReqFD.vehicleServiceTier searchTry.tripCategory searchReq (fromMaybe SL.Default searchReq.area)
+      quoteLimit <- getQuoteLimit searchReq.estimatedDistance sReqFD.vehicleServiceTier searchTry.tripCategory searchReq (fromMaybe SL.Default searchReq.area) searchTry.searchRepeatType searchTry.searchRepeatCounter
       quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
       driverStats <- runInReplica $ QDriverStats.findById driver.id >>= fromMaybeM DriverInfoNotFound
       when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)

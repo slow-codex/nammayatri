@@ -35,12 +35,13 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.WalkLegMultimodal.WalkLegMultimodal {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.distanceUnit ((.unit) estimatedDistance),
-      Se.Set Beam.estimatedDistance ((.value) estimatedDistance),
+    [ Se.Set Beam.distanceUnit ((.unit) <$> estimatedDistance),
+      Se.Set Beam.estimatedDistance ((.value) <$> estimatedDistance),
       Se.Set Beam.estimatedDuration estimatedDuration,
       Se.Set Beam.fromLocationId (Just $ Kernel.Types.Id.getId ((.id) fromLocation)),
       Se.Set Beam.agency (journeyLegInfo >>= (.agency)),
       Se.Set Beam.convenienceCost (Kernel.Prelude.fmap (.convenienceCost) journeyLegInfo),
+      Se.Set Beam.isDeleted (journeyLegInfo >>= (.isDeleted)),
       Se.Set Beam.journeyId (Kernel.Prelude.fmap (.journeyId) journeyLegInfo),
       Se.Set Beam.journeyLegOrder (Kernel.Prelude.fmap (.journeyLegOrder) journeyLegInfo),
       Se.Set Beam.pricingId (journeyLegInfo >>= (.pricingId)),

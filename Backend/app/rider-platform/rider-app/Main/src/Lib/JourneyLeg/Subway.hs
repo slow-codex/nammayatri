@@ -3,6 +3,7 @@
 module Lib.JourneyLeg.Subway where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Domain.Types.Trip as DTrip
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
@@ -11,10 +12,10 @@ import Lib.JourneyLeg.Types.Subway
 import qualified Lib.JourneyModule.Types as JT
 
 instance JT.JourneyLeg SubwayLegRequest m where
-  search (SubwayLegRequestSearch SubwayLegRequestSearchData {..}) = CFRFS.search Spec.METRO personId merchantId quantity city journeyLeg
+  search (SubwayLegRequestSearch SubwayLegRequestSearchData {..}) = CFRFS.search Spec.SUBWAY personId merchantId quantity city journeyLeg
   search _ = throwError (InternalError "Not supported")
 
-  confirm (SubwayLegRequestConfirm SubwayLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId quoteId skipBooking bookingAllowed
+  confirm (SubwayLegRequestConfirm SubwayLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId searchId quoteId skipBooking bookingAllowed
   confirm _ = throwError (InternalError "Not supported")
 
   update (SubwayLegRequestUpdate _) = return ()
@@ -26,12 +27,11 @@ instance JT.JourneyLeg SubwayLegRequest m where
   isCancellable ((SubwayLegRequestIsCancellable _legData)) = return $ JT.IsCancellableResponse {canCancel = False}
   isCancellable _ = throwError (InternalError "Not Supported")
 
-  getState (SubwayLegRequestGetState req) = CFRFS.getState req.searchId req.riderLastPoints req.isLastJustCompleted
+  getState (SubwayLegRequestGetState req) = CFRFS.getState DTrip.Subway req.searchId req.riderLastPoints req.isLastCompleted
   getState _ = throwError (InternalError "Not supported")
 
-  getInfo (SubwayLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.fallbackFare
+  getInfo (SubwayLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.fallbackFare req.distance req.duration
   getInfo _ = throwError (InternalError "Not supported")
 
-  getFare (SubwayLegRequestGetFare _) = do
-    return (Just $ JT.GetFareResponse {estimatedMinFare = HighPrecMoney {getHighPrecMoney = 10}, estimatedMaxFare = HighPrecMoney {getHighPrecMoney = 10}})
+  getFare (SubwayLegRequestGetFare SubwayLegRequestGetFareData {..}) = CFRFS.getFare merchant merchantOpCity Spec.SUBWAY routeCode startStopCode endStopCode
   getFare _ = throwError (InternalError "Not supported")

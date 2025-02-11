@@ -209,11 +209,11 @@ getPersonDetails ::
 getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   personStats <- QPersonStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
-  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let device = getDeviceFromText mbDevice
       totalRides = personStats.completedRides + personStats.driverCancelledRides + personStats.userCancelledRides
       rate = (personStats.userCancelledRides * 100) `div` max 1 totalRides
-      sendCancellationRate = totalRides >= (fromMaybe 1000 riderConfig.minRidesToShowCancellationRate)
+      sendCancellationRate = totalRides >= (fromMaybe 1000 riderConfig.minRidesToShowCancellationRate) && personStats.isBackfilled == Just True
   let cancellationPerc = if sendCancellationRate then Just rate else Nothing
   tag <- case person.hasDisability of
     Just True -> B.runInReplica $ fmap (.tag) <$> PDisability.findByPersonId personId
@@ -414,7 +414,7 @@ sendEmergencyContactAddedMessage personId newPersonDENList oldPersonDENList = do
   let oldList = (.mobileNumber) <$> decOld
       newList = DPDEN.makePersonDefaultEmergencyNumberAPIEntity False <$> decNew
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   buildSmsReq <-
     MessageBuilder.buildAddedAsEmergencyContactMessage person.merchantOperatingCityId $
       MessageBuilder.BuildAddedAsEmergencyContactMessageReq
@@ -529,7 +529,7 @@ getEmergencySettings personId = do
   personENList <- QPersonDEN.findpersonENListWithFallBack personId (Just person)
   safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just person)
   let SafetySettings {personId = _id, ..} = safetySettings
-  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   decPersonENList <- decrypt `mapM` personENList
   return $
     EmergencySettingsRes

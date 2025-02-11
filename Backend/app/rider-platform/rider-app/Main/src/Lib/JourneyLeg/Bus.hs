@@ -3,7 +3,7 @@
 module Lib.JourneyLeg.Bus where
 
 import qualified BecknV2.FRFS.Enums as Spec
-import Kernel.Prelude
+import Domain.Types.Trip as DTrip
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Common.FRFS as CFRFS
@@ -14,7 +14,7 @@ instance JT.JourneyLeg BusLegRequest m where
   search (BusLegRequestSearch BusLegRequestSearchData {..}) = CFRFS.search Spec.BUS personId merchantId quantity city journeyLeg
   search _ = throwError (InternalError "Not supported")
 
-  confirm (BusLegRequestConfirm BusLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId quoteId skipBooking bookingAllowed
+  confirm (BusLegRequestConfirm BusLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId searchId quoteId skipBooking bookingAllowed
   confirm _ = throwError (InternalError "Not supported")
 
   update (BusLegRequestUpdate _) = do
@@ -26,18 +26,17 @@ instance JT.JourneyLeg BusLegRequest m where
     throwError (InternalError "Not supported")
   update _ = throwError (InternalError "Not supported")
 
-  cancel (BusLegRequestCancel _) = throwError (InternalError "Not supported")
+  cancel (BusLegRequestCancel legData) = CFRFS.cancel legData.searchId legData.cancellationType legData.isSkipped
   cancel _ = throwError (InternalError "Not supported")
 
-  isCancellable ((BusLegRequestIsCancellable _legData)) = return $ JT.IsCancellableResponse {canCancel = False}
+  isCancellable (BusLegRequestIsCancellable legData) = CFRFS.isCancellable legData.searchId
   isCancellable _ = throwError (InternalError "Not Supported")
 
-  getState (BusLegRequestGetState req) = CFRFS.getState req.searchId req.riderLastPoints req.isLastJustCompleted
+  getState (BusLegRequestGetState req) = CFRFS.getState DTrip.Bus req.searchId req.riderLastPoints req.isLastCompleted
   getState _ = throwError (InternalError "Not supported")
 
-  getInfo (BusLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.fallbackFare
+  getInfo (BusLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.fallbackFare req.distance req.duration
   getInfo _ = throwError (InternalError "Not supported")
 
-  getFare (BusLegRequestGetFare _) = do
-    return (Just $ JT.GetFareResponse {estimatedMinFare = HighPrecMoney {getHighPrecMoney = 20}, estimatedMaxFare = HighPrecMoney {getHighPrecMoney = 20}})
+  getFare (BusLegRequestGetFare BusLegRequestGetFareData {..}) = CFRFS.getFare merchant merchantOpCity Spec.BUS routeCode startStopCode endStopCode
   getFare _ = throwError (InternalError "Not supported")

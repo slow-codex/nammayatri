@@ -474,7 +474,7 @@ onUpdate = \case
   OUValidatedSafetyAlertReq ValidatedSafetyAlertReq {..} -> do
     logDebug $ "Safety alert triggered for rideId: " <> ride.id.getId
     merchantOperatingCityId <- maybe (QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId) >>= pure . (.merchantOperatingCityId)) pure ride.merchantOperatingCityId
-    riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+    riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
     void $ QRide.updateSafetyJourneyStatus ride.id (DRide.UnexpectedCondition DRide.DriverDeviated)
     safetySettings <- QSafety.findSafetySettingsWithFallback booking.riderId Nothing
     let triggerIVRFlow
@@ -532,6 +532,7 @@ onUpdate = \case
     allBookingParty <- QBPL.findAllActiveByBookingId booking.id
     let allBookingPartyIds = map (.partyId) allBookingParty
     allParty <- catMaybes <$> mapM QPerson.findById (nub $ booking.riderId : allBookingPartyIds)
+    mapM_ QPFS.clearCache (nub $ booking.riderId : allBookingPartyIds)
     Notify.notifyToAllBookingParties allParty booking.tripCategory "DRIVER_HAS_REACHED_DESTINATION"
   OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq {..} -> do
     QRide.updateEstimatedEndTimeRange (Just estimatedEndTimeRange) ride.id

@@ -272,6 +272,9 @@ _rideList = lens (unwrap >>> _._ideList) (\oldRec newVal -> wrap ((unwrap oldRec
 _categoryId :: forall a b c. Newtype a { categoryId :: b | c } => Lens' a b
 _categoryId = lens (unwrap >>> _.categoryId) (\oldRec newVal -> wrap ((unwrap oldRec) { categoryId = newVal }))
 
+_cancellationRate :: forall a b c. Newtype a { cancellationRate :: b | c } => Lens' a b
+_cancellationRate = lens (unwrap >>> _.cancellationRate) (\oldRec newVal -> wrap ((unwrap oldRec) { cancellationRate = newVal }))
+
 _availableSeats :: forall a b c. Newtype a { availableSeats :: b | c } => Lens' a b
 _availableSeats = lens (unwrap >>> _.availableSeats) (\oldRec newVal -> wrap ((unwrap oldRec) { availableSeats = newVal }))
 
@@ -280,6 +283,9 @@ _allowedSeats = lens (unwrap >>> _.allowedSeats) (\oldRec newVal -> wrap ((unwra
 
 _bookedSeats :: forall a b c. Newtype a { bookedSeats :: b | c } => Lens' a b
 _bookedSeats = lens (unwrap >>> _.bookedSeats) (\oldRec newVal -> wrap ((unwrap oldRec) { bookedSeats = newVal }))
+
+_isClosed :: forall a b c. Newtype a { isClosed :: b | c } => Lens' a b
+_isClosed = lens (unwrap >>> _.isClosed) (\oldRec newVal -> wrap ((unwrap oldRec) { isClosed = newVal }))
 
 _peopleCategories :: forall a b c. Newtype a { peopleCategories :: b | c } => Lens' a b
 _peopleCategories = lens (unwrap >>> _.peopleCategories) (\oldRec newVal -> wrap ((unwrap oldRec) { peopleCategories = newVal }))

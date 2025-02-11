@@ -92,6 +92,7 @@ data DriveVehicleAssociationListItem = DriveVehicleAssociationListItem
     completedRides :: Kernel.Prelude.Int,
     vehicleType :: Kernel.Prelude.Maybe Dashboard.Common.VehicleVariant,
     earning :: Kernel.Prelude.Int,
+    isDriverOnRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDriverActive :: Kernel.Prelude.Bool,
     isRcAssociated :: Kernel.Prelude.Bool,
     verificationDocsStatus :: Kernel.Prelude.Maybe VerificationDocsStatus
@@ -328,7 +329,7 @@ data TripDetails = TripDetails {routeCode :: Kernel.Prelude.Text, roundTrip :: K
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TripPlannerReq = TripPlannerReq {driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver, vehicleNumber :: Kernel.Prelude.Text, trips :: [TripDetails], summary :: Dashboard.Common.Summary}
+data TripPlannerReq = TripPlannerReq {driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver, vehicleNumber :: Kernel.Prelude.Text, trips :: [TripDetails]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -337,6 +338,7 @@ instance Kernel.Types.HideSecrets.HideSecrets TripPlannerReq where
 
 data TripStatus
   = TRIP_ASSIGNED
+  | CANCELLED
   | IN_PROGRESS
   | PAUSED
   | COMPLETED
@@ -344,7 +346,8 @@ data TripStatus
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
 data TripTransactionDetail = TripTransactionDetail
-  { routeCode :: Kernel.Prelude.Text,
+  { tripTransactionId :: Kernel.Types.Id.Id Dashboard.Common.TripTransaction,
+    routeCode :: Kernel.Prelude.Text,
     tripStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     tripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     tripStatus :: TripStatus

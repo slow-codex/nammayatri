@@ -5,6 +5,7 @@ import qualified Database.Beam.Query ()
 import qualified Domain.Types.Common as DI
 import Domain.Types.FleetDriverAssociation
 import Domain.Types.Person
+import Domain.Types.VehicleCategory
 import Domain.Utils
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
@@ -22,22 +23,31 @@ import Storage.Queries.OrphanInstances.FleetDriverAssociation ()
 
 -- Extra code goes here --
 
-createFleetDriverAssociationIfNotExists :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id Person -> Bool -> m ()
-createFleetDriverAssociationIfNotExists driverId fleetOwnerId isActive = do
+createFleetDriverAssociationIfNotExists :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id Person -> VehicleCategory -> Bool -> m ()
+createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardingVehicleCategory isActive = do
   now <- getCurrentTime
   mbFleetDriverAssociation <- findAllWithOptionsKV [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId, Se.Is BeamFDVA.isActive $ Se.Eq isActive, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]] (Se.Desc BeamFDVA.createdAt) (Just 1) Nothing <&> listToMaybe
-  when (isNothing mbFleetDriverAssociation) $ do
-    id <- generateGUID
-    createWithKV $
-      FleetDriverAssociation
-        { associatedTill = convertTextToUTC (Just "2099-12-12"),
-          driverId = driverId,
-          fleetOwnerId = fleetOwnerId.getId,
-          associatedOn = Just now,
-          createdAt = now,
-          updatedAt = now,
-          ..
-        }
+  case mbFleetDriverAssociation of
+    Just fleetDriverAssociation ->
+      when (isNothing fleetDriverAssociation.onboardingVehicleCategory) $ do
+        updateWithKV
+          [ Se.Set BeamFDVA.onboardingVehicleCategory (Just onboardingVehicleCategory),
+            Se.Set BeamFDVA.updatedAt now
+          ]
+          [Se.And [Se.Is BeamFDVA.id $ Se.Eq fleetDriverAssociation.id.getId]]
+    Nothing -> do
+      id <- generateGUID
+      createWithKV $
+        FleetDriverAssociation
+          { associatedTill = convertTextToUTC (Just "2099-12-12"),
+            driverId = driverId,
+            fleetOwnerId = fleetOwnerId.getId,
+            associatedOn = Just now,
+            onboardingVehicleCategory = Just onboardingVehicleCategory,
+            createdAt = now,
+            updatedAt = now,
+            ..
+          }
 
 findByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

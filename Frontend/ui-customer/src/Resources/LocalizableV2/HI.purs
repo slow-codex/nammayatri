@@ -35,6 +35,14 @@ getHi = Keymap {
 , continue: "जारी रखें"
 , enter_your_name: "अपना नाम दर्ज करें"
 , full_name: "पूरा नाम"
+, verifying: "सत्यापन किया जा रहा है"
+, referral_code_verified: "रेफरल कोड सत्यापित किया गया!"
+, referral_code_failed: "रेफरल कोड विफल हुआ! कृपया जांच करें और फिर से प्रयास करें।"
+, enter_6_digit_referral_code : "6-अंकों का रेफरल कोड दर्ज करें"
+, not_verified: "सत्यापित नहीं किया गया"
+, optional_bracketted: "(वैकल्पिक)"
+, verify : "सत्यापित करें"
+, referral_code : "रेफरल कोड"
 , email: "ईमेल"
 , welcome_text: "{} में आपका स्वागत है"
 , please_choose_your_preferred_language_to_continue: "जारी रखने के लिए कृपया अपनी पसंदीदा भाषा चुनें।"
@@ -1279,6 +1287,8 @@ getHi = Keymap {
 , view_fares: "किराया देखें"
 , excess_time_description: (\charges -> "अतिरिक्त समय के लिए " <> charges <> "लिया जाएगा")
 , estimated_charges: "अनुमानित शुल्क"
+, your_cancellation_rate_is_high: "आपकी रद्दीकरण दर ऊंची है!"
+, avoid_further_cancellations_to_keep_using_app: (\appName -> appName <> " का उपयोग जारी रखने के लिए आगे रद्दीकरण से बचें")
 , night_time_fees: "रात के समय का शुल्क"
 , parking_and_other_charges: "पार्किंग और अन्य शुल्क"
 , additional_charges: "अतिरिक्त शुल्क"
@@ -1719,4 +1729,12 @@ getHi = Keymap {
 , experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> s <> " प्रमुख मार्गों पर हमारे बस टिकटिंग पायलट लॉन्च का अनुभव करें। जल्द ही और मार्ग जोड़े जाएंगे!")
 , note_your_ticket_is_only_valid_for : (\s -> "ध्यान दें: आपकी टिकट बुकिंग के " <> s <> " तक ही वैध है। स्थानीय परिस्थितियों के कारण बसों का समय बदल सकता है, इसलिए कृपया बुकिंग के समय स्टॉप पर तैयार रहें।")
 , here_is_bus_ticket : "यहाँ बस टिकट है"
+,a_c : "सहमत और जारी रखें"
+,no_oxygen :  "कोई ऑक्सीजन नहीं"
+,oxygen  : "ऑक्सीजन"
+,ventilator : "वेंटीलेटर"
+,ambulance_ : "एम्बुलेंस"
+,uncomfortable_ambulance : "असुविधाजनक एम्बुलेंस"
+,clean_ambulance : "स्वच्छ एम्बुलेंस"
+,ambulance_booking_disclaimer : "यात्री साथी केवल एक प्लेटफ़ॉर्म है जो एम्बुलेंस सेवा प्रदाताओं को ग्राहकों से जोड़ता है। हम एम्बुलेंस पार्टी द्वारा प्रदान की गई जानकारी के लिए जिम्मेदार नहीं हैं।"
 }

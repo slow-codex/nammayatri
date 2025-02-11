@@ -29,6 +29,7 @@ import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.ParcelDetails as DParcel
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
@@ -48,6 +49,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
+import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -59,6 +61,7 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.ParcelDetails as QParcel
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SearchRequest as QSReq
 import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
@@ -145,7 +148,7 @@ confirm DConfirmReq {..} = do
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
   let isScheduled = merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
-  (booking, bookingParties) <- buildBooking searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled searchRequest.disabilityTag
+  (booking, bookingParties) <- buildBooking searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions
   -- check also for the booking parties
   checkIfActiveRidePresentForParties bookingParties
   when isScheduled $ do
@@ -227,6 +230,9 @@ confirm DConfirmReq {..} = do
         DRB.DeliveryDetails details -> return details.toLocation
         _ -> throwError (InternalError $ "DeliveryBookingDetails not found for booking" <> booking.id.getId)
       (Trip.DeliveryParty initiatedBy) <- booking.initiatedBy & fromMaybeM (InternalError $ "BookingInitiatedBy not found for booking" <> booking.id.getId)
+      let (parcelType, parcelQuantity) = case booking.bookingDetails of
+            DRB.DeliveryDetails details -> (Just details.parcelType, details.parcelQuantity)
+            _ -> (Nothing, Nothing)
       return $
         DConfirmResDelivery $
           DTDD.DeliveryDetails
@@ -244,7 +250,8 @@ confirm DConfirmReq {..} = do
                     DTDD.countryCode = Nothing,
                     DTDD.address = toLocation.address
                   },
-              DTDD.initiatedAs = initiatedBy
+              DTDD.initiatedAs = initiatedBy,
+              ..
             }
 
 buildBooking ::
@@ -264,8 +271,9 @@ buildBooking ::
   Maybe Payment.PaymentMethodId ->
   Bool ->
   Maybe Text ->
+  [LYT.ConfigVersionMap] ->
   m (DRB.Booking, [DBPL.BookingPartiesLink])
-buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId isScheduled disabilityTag = do
+buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId isScheduled disabilityTag configInExperimentVersions = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
   bookingParties <- buildPartiesLinks id
@@ -328,6 +336,8 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           hasStops = searchRequest.hasStops,
           isReferredRide = searchRequest.driverIdentifier $> True,
           journeyLegOrder = searchRequest.journeyLegInfo <&> (.journeyLegOrder),
+          isDeleted = Just False,
+          isSkipped = Just False,
           ..
         },
       bookingParties
@@ -371,6 +381,9 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
     buildDeliveryDetails = do
       toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
+      parcelDetails <- QParcel.findBySearchRequestId searchRequest.id
+      let parcelType = maybe (DParcel.Others "Unknown") (.parcelType) parcelDetails
+          parcelQuantity = parcelDetails >>= (.quantity)
       pure DRB.DeliveryBookingDetails {..}
     makeDeliveryParties :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m [DBPL.BookingPartiesLink]
     makeDeliveryParties bookingId = do

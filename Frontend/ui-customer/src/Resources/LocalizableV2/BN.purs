@@ -34,6 +34,14 @@ getBn = Keymap {
 , enter_your_name: "আপনার নাম লিখুন"
 , full_name: "পুরো নাম"
 , email: "ইমেল"
+, verifying: "যাচাই করা হচ্ছে"
+, referral_code_verified: "রেফারেল কোড যাচাই করা হয়েছে!"
+, referral_code_failed:"রেফারেল কোড ব্যর্থ হয়েছে! অনুগ্রহ করে যাচাই করুন এবং আবার চেষ্টা করুন।"
+, enter_6_digit_referral_code: "6-সংখ্যার রেফারেল কোড প্রবেশ করুন"
+, not_verified : "যাচাই করা হয়নি"
+, verify : "যাচাই করুন"
+, referral_code : "রেফারেল কোড"
+, optional_bracketted: "(ঐচ্ছিক)"
 , welcome_text: "{} আপনাকে স্বাগতম"
 , please_choose_your_preferred_language_to_continue: "চালিয়ে যেতে আপনার পছন্দসই ভাষা চয়ন চয়ন করুন।।"
 , write_to_us: "আমাদের লিখুন"
@@ -1279,6 +1287,8 @@ getBn = Keymap {
 , view_fares: "ভাড়া দেখুন"
 , excess_time_description: (\charges -> "অতিরিক্ত সময় " <> charges <> " চার্জ করা হবে")
 , estimated_charges: "আনুমানিক চার্জ"
+, your_cancellation_rate_is_high: "আপনার বাতিলকরণের হার বেশি!"
+, avoid_further_cancellations_to_keep_using_app: (\appName -> appName <> " ব্যবহার চালিয়ে যেতে আরও বাতিলকরণ এড়ান")
 , night_time_fees: "রাতের সময় ফি"
 , parking_and_other_charges: "পার্কিং এবং অন্যান্য খরচ"
 , additional_charges: "অতিরিক্ত খরচ"
@@ -1719,4 +1729,12 @@ getBn = Keymap {
 , experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> s <> " টি প্রধান রুটে আমাদের বাস টিকিটিং পাইলট লঞ্চের অভিজ্ঞতা নিন। শীঘ্রই আরও রুট আসছে!")
 , note_your_ticket_is_only_valid_for : (\s -> "দ্রষ্টব্য: আপনার টিকিট বুকিংয়ের " <> s <> " পর্যন্ত বৈধ। স্থানীয় পরিস্থিতির কারণে বাসের সময়সূচি পরিবর্তিত হতে পারে, তাই দয়া করে বুক করার সময় স্টপেজে প্রস্তুত থাকুন।")
 , here_is_bus_ticket : "এখানে আ"
+,a_c : "সম্মত এবং চালিয়ে যান"
+,no_oxygen :  "অক্সিজেন নেই"
+,oxygen  : "অক্সিজেন"
+,ventilator : "ভেন্টিলেটর"
+,ambulance_ : "অ্যাম্বুলেন্স"
+,uncomfortable_ambulance : "অস্বস্তিকর অ্যাম্বুলেন্স"
+,clean_ambulance : "পরিষ্কার অ্যাম্বুলেন্স"
+,ambulance_booking_disclaimer : "যাত্রী সাথী শুধুমাত্র একটি প্ল্যাটফর্ম যা অ্যাম্বুলেন্স সেবা প্রদানকারীদের গ্রাহকদের সাথে সংযুক্ত করে। আমরা অ্যাম্বুলেন্স পার্টির দ্বারা প্রদত্ত তথ্যের জন্য দায়ী নই।"
 }

@@ -35,6 +35,14 @@ getTe = Keymap {
 , full_name: "పూర్తి పేరు"
 , email: "ఇమెయిల్"
 , welcome_text: "{}కి స్వాగతం"
+, verifying: "ధృవీకరిస్తోంది"
+, referral_code_verified: "సూచన కోడ్ ధృవీకరించబడింది"
+, referral_code_failed: "సూచన కోడ్ విఫలమైంది! దయచేసి తనిఖీ చేసి మళ్లీ ప్రయత్నించండి"
+, enter_6_digit_referral_code: "6 అంకెల సూచన కోడ్‌ను నమోదు చేయండి"
+, not_verified: "ధృవీకరించబడలేదు"
+, optional_bracketted: "(ఐచ్ఛికం)"
+, verify : "ధృవీకరించండి"
+, referral_code : "రిఫరల్_కోడ్"
 , please_choose_your_preferred_language_to_continue: "దయచేసి కొనసాగించడానికి మీరు ఇష్టపడే భాషను ఎంచుకోండి."
 , write_to_us: "మాకు వ్రాయండి"
 , note: "గమనిక "
@@ -1279,6 +1287,8 @@ getTe = Keymap {
 , view_fares: "ఛార్జీలను వీక్షించండి"
 , excess_time_description: (\charges -> "అదనపు సమయం " <> charges <> " ఛార్జ్ చేయబడుతుంది")
 , estimated_charges: "అంచనా వేసిన ఛార్జీలు"
+, your_cancellation_rate_is_high: "మీ రద్దు రేటు ఎక్కువగా ఉంది!"
+, avoid_further_cancellations_to_keep_using_app: (\appName -> appName <> " ని ఉపయోగించడం కొనసాగించడానికి తదుపరి రద్దులను నివారించండి.")
 , night_time_fees: "రాత్రి సమయ ధరలు"
 , parking_and_other_charges: "పార్కింగ్ మరియు ఇతర ధరలు"
 , additional_charges: "అదనపు ధరలు"
@@ -1719,4 +1729,12 @@ getTe = Keymap {
 , experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> s <> " ప్రధాన మార్గాలలో మా బస్ టికెటింగ్ పైలట్ లాంచ్ అనుభవించండి. మరిన్ని మార్గాలు త్వరలో వస్తున్నాయి!")
 , note_your_ticket_is_only_valid_for : (\s -> "గమనిక: మీ టికెట్ బుకింగ్ చేసిన " <> s <> " మాత్రమే చెల్లుతుంది. స్థానిక పరిస్థితుల కారణంగా బస్సుల సమయం మారవచ్చు, కాబట్టి మీరు బుక్ చేసే సమయానికి స్టాప్ వద్ద సిద్ధంగా ఉండండి।")
 , here_is_bus_ticket : "ఇక్కడ మీ బస్ టికెట్"
+,a_c : "ఆమోదించండి & కొనసాగించండి"
+,no_oxygen :  "ఆక్సిజన్ లేదు"
+,oxygen  : "ఆక్సిజన్"
+,ventilator : "వెంటిలేటర్"
+,ambulance_ : "అంబులెన్స్"
+,uncomfortable_ambulance : "అసౌకర్యవంతమైన అంబులెన్స్"
+,clean_ambulance : "శుభ్రమైన అంబులెన్స్"
+,ambulance_booking_disclaimer : "யாத்திரி சாத்தி என்பது எம்புலன்ஸ் சேவை வழங்குநர்களை வாடிக்கையாளர்களுடன் இணைக்கும் ஒரு தளமாகும். எம்புலன்ஸ் குழுவினரால் வழங்கப்பட்ட தகவலுக்கு நாங்கள் பொறுப்பாக இருக்கவில்லை"
 }

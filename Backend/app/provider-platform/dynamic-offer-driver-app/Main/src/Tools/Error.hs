@@ -1216,6 +1216,10 @@ data DriverOnboardingError
   | DocumentAlreadyInSync
   | NotValidatedUisngFrontendSDK
   | InvalidDocumentType Text
+  | DriverOnboardingVehicleCategoryNotFound
+  | HyperVergeWebhookPayloadRecordNotFound Text
+  | DuplicateWebhookReceived
+  | WebhookAuthFailed
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
 instance IsBaseError DriverOnboardingError where
@@ -1265,6 +1269,10 @@ instance IsBaseError DriverOnboardingError where
     DocumentAlreadyInSync -> Just "Document already in sync"
     NotValidatedUisngFrontendSDK -> Just "Document not validated using frontend SDK"
     InvalidDocumentType docType -> Just $ "Document type send in the query is invalid or not supported!!!! query = " <> docType
+    DriverOnboardingVehicleCategoryNotFound -> Just $ "Driver Onboarding Vehicle Catgeory Not Found"
+    HyperVergeWebhookPayloadRecordNotFound reqId -> Just $ "Request id in Hyperverge webhook does not match any request id in HypervergeVerification table. RequestId : " <> reqId
+    DuplicateWebhookReceived -> Just "Multiple webhooks received for same request id."
+    WebhookAuthFailed -> Just "Auth header data mismatch ocurred!!!!!!"
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -1313,6 +1321,10 @@ instance IsHTTPError DriverOnboardingError where
     DocumentAlreadyInSync -> "DOCUMENT_ALREADY_IN_SYNC"
     NotValidatedUisngFrontendSDK -> "DOCUMENT_NOT_VALIDATED_USING_FRONTEND_SDK"
     InvalidDocumentType _ -> "INAVLID_DOCUMENT_TYPE"
+    DriverOnboardingVehicleCategoryNotFound -> "DRIVER_ONBOARDING_VEHICLE_CATEGORY_NOT_FOUND"
+    HyperVergeWebhookPayloadRecordNotFound _ -> "HYPERVERGE_WEBHOOK_PAYLOAD_RECORD_NOT_FOUND"
+    DuplicateWebhookReceived -> "DUPLICATE_WEBHOOK_RECEIVED"
+    WebhookAuthFailed -> "WEBHOOK_AUTH_FAILED"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -1359,6 +1371,10 @@ instance IsHTTPError DriverOnboardingError where
     DocumentAlreadyInSync -> E400
     NotValidatedUisngFrontendSDK -> E400
     InvalidDocumentType _ -> E400
+    DriverOnboardingVehicleCategoryNotFound -> E500
+    HyperVergeWebhookPayloadRecordNotFound _ -> E400
+    DuplicateWebhookReceived -> E400
+    WebhookAuthFailed -> E401
 
 instance IsAPIError DriverOnboardingError
 
@@ -1543,12 +1559,10 @@ data WMBErrors
   | RouteTripStopMappingNotFound Text
   | VehicleRouteMappingBlocked
   | AlreadyOnActiveTripWithAnotherVehicle Text
-  deriving (Eq, Show)
+  | AlreadyOnActiveTrip
+  deriving (Eq, Show, IsBecknAPIError)
 
-instance IsBecknAPIError WMBErrors
-
-instance Exception WMBErrors where
-  displayException = show
+instanceExceptionWithParent 'HTTPException ''WMBErrors
 
 instance IsBaseError WMBErrors where
   toMessage = \case
@@ -1584,6 +1598,7 @@ instance IsBaseError WMBErrors where
     StopNotFound -> Just "Stop Not Found"
     RouteTripStopMappingNotFound routeCode -> Just $ "Route trip stop mapping not found for route code : " <> routeCode
     VehicleRouteMappingBlocked -> Just "Vehicle Route Mapping is blocked, unblock and try again."
+    AlreadyOnActiveTrip -> Just "Driver is already on an Active trip."
 
 instance IsHTTPError WMBErrors where
   toErrorCode = \case
@@ -1619,6 +1634,7 @@ instance IsHTTPError WMBErrors where
     StopNotFound -> "STOP_NOT_FOUND"
     RouteTripStopMappingNotFound _ -> "ROUTE_TRIP_STOP_MAPPING_NOT_FOUND"
     VehicleRouteMappingBlocked -> "VEHICLE_ROUTE_MAPPING_BLOCKED"
+    AlreadyOnActiveTrip -> "ALREADY_ON_ACTIVE_TRIP"
 
   toHttpCode = \case
     AlreadyOnActiveTripWithAnotherVehicle _ -> E400
@@ -1653,3 +1669,6 @@ instance IsHTTPError WMBErrors where
     StopNotFound -> E400
     RouteTripStopMappingNotFound _ -> E400
     VehicleRouteMappingBlocked -> E400
+    AlreadyOnActiveTrip -> E400
+
+instance IsAPIError WMBErrors

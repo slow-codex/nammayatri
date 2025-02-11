@@ -37,3 +37,28 @@ ALTER TABLE atlas_app.journey ADD COLUMN end_time timestamp with time zone ;
 --- Now DSL don't allow dropping tables instead we will drop not null constraint if any .Please be careful while running ---
 ALTER TABLE atlas_app.journey ALTER COLUMN legs_done DROP NOT NULL;
 --- Drop section ends. Please check before running ---
+
+
+
+
+------- SQL updates -------
+ALTER TABLE atlas_app.journey ADD COLUMN status text ;
+
+
+
+------- SQL updates -------
+ALTER TABLE atlas_app.journey ADD COLUMN rider_id character varying(36) NOT NULL default "";
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

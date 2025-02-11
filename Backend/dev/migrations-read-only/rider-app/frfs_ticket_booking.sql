@@ -141,6 +141,7 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN journey_on_init_done boolea
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN is_deleted boolean ;
 
 
 
@@ -157,3 +158,36 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN journey_leg_status text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN google_wallet_jwt_url text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN platform_number text ;
+
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN is_skipped boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN is_fare_changed boolean ;

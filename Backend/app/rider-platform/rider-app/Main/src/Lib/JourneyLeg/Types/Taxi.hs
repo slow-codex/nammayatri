@@ -1,6 +1,8 @@
 module Lib.JourneyLeg.Types.Taxi where
 
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
+import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Estimate as DE
 import qualified Domain.Types.Extra.Ride as DR
 import qualified Domain.Types.JourneyLeg as DJourenyLeg
@@ -24,9 +26,11 @@ data TaxiLegRequestSearchData = TaxiLegRequestSearchData
 
 data TaxiLegRequestConfirmData = TaxiLegRequestConfirmData
   { skipBooking :: Bool,
+    forcedBooked :: Bool,
     startTime :: UTCTime,
     personId :: Id DP.Person,
     merchantId :: Id DM.Merchant,
+    searchId :: Text,
     estimateId :: Maybe (Id DE.Estimate)
   }
 
@@ -46,8 +50,19 @@ data EditLocationRequest = EditLocationRequest
 data TaxiLegRequestUpdateData = EditLocation EditLocationRequest | ChangeServiceTier ChangeServiceTierData
 
 data TaxiLegRequestCancelData = TaxiLegRequestCancelData
+  { searchRequestId :: Id DSR.SearchRequest,
+    reasonCode :: SCR.CancellationReasonCode,
+    -- reasonStage :: SCR.CancellationStage,
+    additionalInfo :: Maybe Text,
+    reallocate :: Maybe Bool,
+    blockOnCancellationRate :: Maybe Bool,
+    cancellationSource :: SBCR.CancellationSource,
+    isSkipped :: Bool
+  }
 
 data TaxiLegRequestIsCancellableData = TaxiLegRequestIsCancellableData
+  { searchId :: Id DSR.SearchRequest
+  }
 
 newtype TaxiLegRequestGetInfoData = TaxiLegRequestGetInfoData
   { searchId :: Id DSR.SearchRequest
@@ -56,7 +71,7 @@ newtype TaxiLegRequestGetInfoData = TaxiLegRequestGetInfoData
 data TaxiLegRequestGetStateData = TaxiLegRequestGetStateData
   { searchId :: Id DSR.SearchRequest,
     riderLastPoints :: [ApiTypes.RiderLocationReq],
-    isLastJustCompleted :: Bool
+    isLastCompleted :: Bool
   }
 
 data TaxiLegRequestGetFareData = TaxiLegRequestGetFareData

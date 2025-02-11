@@ -19,16 +19,25 @@ imports:
 Journey:
   tableName: journey
 
+  types:
+    JourneyStatus:
+      enum: "NEW, INITIATED, CONFIRMED, INPROGRESS, CANCELLED, FEEDBACK_PENDING, COMPLETED"
+
   fields:
     id: Id Journey
     searchRequestId: Id SearchRequest
+    riderId: Id Person
     startTime: Maybe UTCTime
     endTime: Maybe UTCTime
     estimatedDistance: Distance
     estimatedDuration: Maybe Seconds
     modes: "[MultimodalTravelMode]"
     convenienceCost: Int
+    status: JourneyStatus
     totalLegs: Int
+
+  beamType:
+    status: Maybe JourneyStatus
 
   beamFields:
     fare:
@@ -40,22 +49,35 @@ Journey:
 
   fromTType:
     estimatedDistance: (Kernel.Types.Common.Distance estimatedDistance distanceUnit)|E
+    status: (fromMaybe Domain.Types.Journey.NEW status)|E
 
   toTType:
     estimatedDistance: ((.value))|I
     distanceUnit: ((.unit))|I
+    status: (Just status)|E
 
   constraints:
     id: PrimaryKey
     searchRequestId: "!SecondaryKey"
+    riderId: "!SecondaryKey"
 
   queries:
     findBySearchId:
         kvFunction: findAllWithKV
         where: searchRequestId
+    updateStatus:
+        kvFunction: updateOneWithKV
+        params: [status]
+        where: id
 
   sqlType:
     modes: "text[]"
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  default:
+    riderId: '""' # default value for backward compatibility
 
 #passenger details
 JourneyBooking:
@@ -124,7 +146,7 @@ WalkLegMultimodal:
     riderId: Id Person
     fromLocation: Location
     toLocation: Maybe Location
-    estimatedDistance: Distance
+    estimatedDistance: Maybe Distance
     estimatedDuration: Maybe Seconds
     status: WalkLegStatus
     merchantId: Id Merchant
@@ -147,8 +169,8 @@ WalkLegMultimodal:
 
   beamFields:
     estimatedDistance:
-      estimatedDistance: HighPrecDistance
-      distanceUnit: DistanceUnit
+      estimatedDistance: Maybe HighPrecDistance
+      distanceUnit: Maybe DistanceUnit
     fromLocation:
       fromLocationId: Maybe Text
     toLocation:
@@ -160,16 +182,17 @@ WalkLegMultimodal:
       skipBooking: Maybe Bool
       convenienceCost: Maybe Int
       pricingId: Maybe Text
+      isDeleted: Maybe Bool
 
   fromTType:
-    estimatedDistance: (Kernel.Types.Common.Distance estimatedDistance distanceUnit)|E
+    estimatedDistance: (Kernel.Types.Common.Distance <$> estimatedDistance <*> distanceUnit)|E
     fromLocation: Storage.Queries.Transformers.MultiModal.getFromLocation id|EM
     toLocation: Storage.Queries.Transformers.MultiModal.getToLocation id|EM
     journeyLegInfo: Storage.Queries.Transformers.MultiModal.mkJourneyLegInfo
 
   toTType:
-    estimatedDistance: ((.value))|I
-    distanceUnit: ((.unit))|I
+    estimatedDistance: (.value) <$> |I
+    distanceUnit: (.unit) <$> |I
     fromLocationId: (Just $ Kernel.Types.Id.getId ((.id) fromLocation))|E
     toLocationId: (Kernel.Types.Id.getId <$> (toLocation <&> (.id)))|E
     journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
@@ -178,6 +201,7 @@ WalkLegMultimodal:
     skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
     pricingId: (journeyLegInfo >>= (.pricingId))|E
+    isDeleted: (journeyLegInfo >>= (.isDeleted))|E
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -185,9 +209,9 @@ WalkLegMultimodal:
 JourneyLeg:
   fields:
     id: Id JourneyLeg
-    distance: Distance
     journeyId: Id Journey
-    duration: Seconds
+    duration: Maybe Seconds
+    distance: Maybe Distance
     # polylinePoints: PolylinePoints     #to see    #Polyline.encodedPolyline
     mode: MultimodalTravelMode
     startLocation: LatLngV2 #LocationV2     #Location.latLng
@@ -204,19 +228,23 @@ JourneyLeg:
     toDepartureTime: Maybe UTCTime
     sequenceNumber: Int
     legSearchId: Maybe Text
+    isDeleted: Maybe Bool
+    isSkipped: Maybe Bool
 
   beamFields:
     distance:
-      distance: HighPrecDistance
-      distanceUnit: DistanceUnit
+      distance: Maybe HighPrecDistance
+      distanceUnit: Maybe DistanceUnit
     fromStopDetails:
       fromStopCode: Maybe Text
       fromStopName: Maybe Text
       fromStopGtfsId: Maybe Text
+      fromStopPlatformCode : Maybe Text
     toStopDetails:
       toStopCode: Maybe Text
       toStopName: Maybe Text
       toStopGtfsId: Maybe Text
+      toStopPlatformCode : Maybe Text
     routeDetails:
       routeGtfsId: Maybe Text
       routeLongName: Maybe Text
@@ -244,11 +272,34 @@ JourneyLeg:
       kvFunction: updateOneWithKV
       params: [legSearchId]
       where: id
+    updateMode:
+      kvFunction: updateOneWithKV
+      params: [mode]
+      where: id
+    updateIsDeleted:
+      kvFunction: updateOneWithKV
+      params: [isDeleted]
+      where: legSearchId
+    updateIsSkipped:
+      kvFunction: updateOneWithKV
+      params: [isSkipped]
+      where: legSearchId
+    updateDistanceAndDuration:
+      kvFunction: updateWithKV
+      params: [distance, duration]
+      where: id
+    findByLegSearchId:
+      kvFunction: findOneWithKV
+      where: legSearchId
+    updateAfterEditLocation:
+      kvFunction: updateWithKV
+      params: [duration, distance, endLocation]
+      where: id
 
   fromTType:
-    distance: (Kernel.Types.Common.Distance distance distanceUnit)|E
-    fromStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopName fromStopGtfsId)|E
-    toStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopName toStopGtfsId)|E
+    distance: (Kernel.Types.Common.Distance <$> distance <*> distanceUnit)|E
+    fromStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopPlatformCode fromStopName fromStopGtfsId)|E
+    toStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopPlatformCode toStopName toStopGtfsId)|E
     routeDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails routeGtfsId routeLongName routeShortName routeColorCode)|E
     agency: (Kernel.External.MultiModal.Interface.Types.MultiModalAgency agencyGtfsId <$> agencyName)|E)
     startLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon|E
@@ -256,13 +307,15 @@ JourneyLeg:
     legSearchId: legId|E
 
   toTType:
-    distance: ((.value))|I
-    distanceUnit: ((.unit))|I
+    distance: (.value) <$> |I
+    distanceUnit: (.unit) <$> |I
     fromStopCode:  (fromStopDetails >>= (.stopCode))|E
     fromStopName:  (fromStopDetails >>= (.name))|E
+    fromStopPlatformCode: (fromStopDetails >>= (.platformCode))|E
     fromStopGtfsId: (fromStopDetails >>= (.gtfsId))|E
     toStopCode:  (toStopDetails >>= (.stopCode))|E
     toStopName:  (toStopDetails >>= (.name))|E
+    toStopPlatformCode:  (toStopDetails >>= (.platformCode))|E
     toStopGtfsId: (toStopDetails >>= (.gtfsId))|E
     routeGtfsId: (routeDetails >>= (.gtfsId))|E
     routeLongName: (routeDetails >>= (.longName))|E
@@ -281,3 +334,38 @@ JourneyLeg:
   constraints:
     id: PrimaryKey
     journeyId: "!SecondaryKey"
+
+JourneyFeedback:
+  fields:
+    journeyId: Id Journey
+    riderId: Id Person
+    rating: Maybe Int
+    additionalFeedBack: Maybe Text
+
+  queries:
+    findAllByJourneyId:
+      kvFunction: findAllWithKV
+      where: journeyId
+    findAllByRiderId:
+      kvFunction: findAllWithKV
+      where: riderId
+
+  constraints:
+    journeyId: PrimaryKey
+    riderId: SecondaryKey
+
+JourneyLegsFeedbacks:
+  fields:
+    journeyId : Id Journey
+    legOrder: Int
+    isExperienceGood: Maybe Bool
+
+  queries:
+    findAllByJourneyIdAndLegOrder:
+      kvFunction: findAllWithKV
+      where:
+        and: [journeyId, legOrder]
+
+  constraints:
+    journeyId : PrimaryKey
+    legOrder : PrimaryKey

@@ -1,6 +1,7 @@
 module Lib.JourneyLeg.Types.Bus where
 
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
+import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch as FRFSSearch
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
@@ -23,6 +24,7 @@ data BusLegRequestSearchData = BusLegRequestSearchData
 
 data BusLegRequestConfirmData = BusLegRequestConfirmData
   { quoteId :: Maybe (Id FRFSQuote),
+    searchId :: Id FRFSSearch.FRFSSearch,
     skipBooking :: Bool,
     bookingAllowed :: Bool,
     personId :: Id DPerson.Person,
@@ -33,23 +35,36 @@ data BusLegRequestConfirmData = BusLegRequestConfirmData
 data BusLegRequestUpdateData = BusLegRequestUpdateData
 
 data BusLegRequestCancelData = BusLegRequestCancelData
+  { searchId :: Id FRFSSearch.FRFSSearch,
+    cancellationType :: Spec.CancellationType,
+    isSkipped :: Bool
+  }
 
 data BusLegRequestIsCancellableData = BusLegRequestIsCancellableData
+  { searchId :: Id FRFSSearch.FRFSSearch
+  }
 
 data BusLegRequestGetInfoData = BusLegRequestGetInfoData
   { searchId :: Id FRFSSearch.FRFSSearch,
-    fallbackFare :: Maybe HighPrecMoney
+    fallbackFare :: Maybe HighPrecMoney,
+    distance :: Maybe Distance,
+    duration :: Maybe Seconds
   }
 
 data BusLegRequestGetStateData = BusLegRequestGetStateData
   { searchId :: Id FRFSSearch.FRFSSearch,
     riderLastPoints :: [ApiTypes.RiderLocationReq],
-    isLastJustCompleted :: Bool
+    isLastCompleted :: Bool
   }
 
 data BusLegRequestGetFareData = BusLegRequestGetFareData
   { startLocation :: LatLngV2,
-    endLocation :: LatLngV2
+    endLocation :: LatLngV2,
+    routeCode :: Text,
+    startStopCode :: Text,
+    endStopCode :: Text,
+    merchant :: DMerchant.Merchant,
+    merchantOpCity :: DMOC.MerchantOperatingCity
   }
 
 data BusLegRequest

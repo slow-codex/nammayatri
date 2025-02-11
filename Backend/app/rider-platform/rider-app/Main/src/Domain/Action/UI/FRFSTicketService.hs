@@ -333,7 +333,7 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin mbRouteCode mb
 
 postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Spec.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
 postFrfsSearch (mbPersonId, merchantId) mbCity vehicleType_ req =
-  postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ req Nothing Nothing Nothing Nothing Nothing
+  postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ req Nothing Nothing Nothing Nothing Nothing Nothing
 
 postFrfsSearchHandler ::
   CallExternalBPP.FRFSSearchFlow m r =>
@@ -346,8 +346,9 @@ postFrfsSearchHandler ::
   Maybe Text ->
   Maybe Text ->
   Maybe Int ->
+  Maybe Text ->
   m API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
-postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPIReq {..} mbPOrgTxnId mbPOrgId mbColor mbColorCode mbFrequency = do
+postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPIReq {..} mbPOrgTxnId mbPOrgId mbColor mbColorCode mbFrequency platformNumber = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) >>= fromMaybeM (InternalError "Beckn Config not found")
@@ -393,6 +394,7 @@ postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPI
             lineColorCode = mbColorCode,
             journeyLegStatus = Just JLT.InPlan,
             frequency = mbFrequency,
+            isOnSearchReceived = Nothing,
             ..
           }
   QFRFSSearch.create searchReq
@@ -490,6 +492,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
               (HighPrecMoney 0.0)
               selectedDiscounts
       let discountedPrice = modifyPrice quote.price $ \p -> max (HighPrecMoney 0.0) $ HighPrecMoney ((p.getHighPrecMoney) * (toRational quote.quantity)) - totalDiscount
+      let isFareChanged = isJust oldCacheDump
       let booking =
             DFRFSTicketBooking.FRFSTicketBooking
               { id = uuid,
@@ -521,8 +524,12 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
                 lineColor = mbSearch >>= (.lineColor),
                 lineColorCode = mbSearch >>= (.lineColorCode),
                 journeyLegStatus = mbSearch >>= (.journeyLegStatus),
+                platformNumber = mbSearch >>= (.platformNumber),
                 startTime = Just now, -- TODO
+                isFareChanged = Just isFareChanged,
                 googleWalletJWTUrl = Nothing,
+                isDeleted = Just False,
+                isSkipped = Just False,
                 ..
               }
       QFRFSTicketBooking.create booking
@@ -545,6 +552,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
           tickets = [],
           discountedTickets = booking.discountedTickets,
           eventDiscountAmount = booking.eventDiscountAmount,
+          isFareChanged = booking.isFareChanged,
           googleWalletJWTUrl = booking.googleWalletJWTUrl,
           ..
         }
@@ -751,6 +759,7 @@ frfsBookingStatus (personId, merchantId_) booking' = do
 
     getPaymentType = \case
       Spec.METRO -> Payment.FRFSBooking
+      Spec.SUBWAY -> Payment.FRFSBooking
       Spec.BUS -> Payment.FRFSBusBooking
 
     createOrderCall merchantOperatingCityId booking = Payment.createOrder merchantId_ merchantOperatingCityId Nothing (getPaymentType booking.vehicleType)
@@ -815,6 +824,7 @@ buildFRFSTicketBookingStatusAPIRes booking payment = do
         discountedTickets = booking.discountedTickets,
         eventDiscountAmount = booking.eventDiscountAmount,
         payment = payment <&> (\p -> p {transactionId = booking.paymentTxnId}),
+        isFareChanged = booking.isFareChanged,
         googleWalletJWTUrl = booking.googleWalletJWTUrl,
         ..
       }

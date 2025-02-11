@@ -719,7 +719,7 @@ types:
     - recordType: NewType
     - driverLocations: [TrackDriverLocation]
   TripStatus:
-    - enum: "TRIP_ASSIGNED, IN_PROGRESS, PAUSED, COMPLETED"
+    - enum: "TRIP_ASSIGNED, CANCELLED, IN_PROGRESS, PAUSED, COMPLETED"
     - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
   RoundTripDetail:
     - frequency: Int
@@ -730,9 +730,9 @@ types:
     - driverId: Id Driver
     - vehicleNumber: Text
     - trips: [TripDetails]
-    - summary: Summary
     - derive: "'HideSecrets"
   TripTransactionDetail:
+    - tripTransactionId: Id TripTransaction
     - routeCode: Text
     - tripStartTime: Maybe UTCTime
     - tripEndTime: Maybe UTCTime
@@ -828,6 +828,7 @@ types:
     - completedRides: Int # will remove this
     - vehicleType: Maybe VehicleVariant
     - earning: Int # this also
+    - isDriverOnRide: Maybe Bool
     - isDriverActive: Bool
     - isRcAssociated: Bool
     - verificationDocsStatus: Maybe VerificationDocsStatus

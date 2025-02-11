@@ -51,7 +51,9 @@ FRFSSearch:
     journeyLegStatus: Maybe JourneyLegStatus
     lineColor: Maybe Text
     lineColorCode: Maybe Text
+    platformNumber: Maybe Text
     frequency: Maybe Int
+    isOnSearchReceived: Maybe Bool
 
   beamFields:
     journeyLegInfo:
@@ -61,6 +63,7 @@ FRFSSearch:
       skipBooking: Maybe Bool
       convenienceCost: Maybe Int
       pricingId: Maybe Text
+      isDeleted: Maybe Bool
 
   toTType:
     journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
@@ -69,6 +72,7 @@ FRFSSearch:
     skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
     pricingId: (journeyLegInfo >>= (.pricingId))|E
+    isDeleted: (journeyLegInfo >>= (.isDeleted))|E
 
   fromTType:
     journeyLegInfo: mkJourneyLegInfo
@@ -87,7 +91,14 @@ FRFSSearch:
       kvFunction: updateOneWithKV
       params: [journeyLegStatus]
       where: id
-
+    updateIsOnSearchReceivedById:
+      kvFunction: updateWithKV
+      params: [isOnSearchReceived]
+      where: id
+    updateRiderIdById:
+      kvFunction: updateWithKV
+      params: [riderId]
+      where: id
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -175,6 +186,7 @@ FRFSQuote:
     eventDiscountAmount: Maybe HighPrecMoney
     discountedTickets: Maybe Int
     bppDelayedInterest: Maybe Int
+    oldCacheDump: Maybe Text
 
   beamFields:
     price:
@@ -211,6 +223,9 @@ FRFSQuote:
     findAllBySearchId:
       kvFunction: findAllWithKV
       where: searchId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 FRFSTicketBooking:
   tableName: frfs_ticket_booking
@@ -259,6 +274,7 @@ FRFSTicketBooking:
     bppDelayedInterest : Maybe Int
     lineColor : Maybe Text
     lineColorCode : Maybe Text
+    platformNumber: Maybe Text
     googleWalletJWTUrl : Maybe Text
     frequency : Maybe Int
     journeyLegOrder : Maybe Int
@@ -266,6 +282,9 @@ FRFSTicketBooking:
     journeyOnInitDone: Maybe Bool
     startTime: Maybe UTCTime
     journeyLegStatus: Maybe JourneyLegStatus
+    isDeleted : Maybe Bool
+    isFareChanged: Maybe Bool
+    isSkipped: Maybe Bool
 
   default:
     customerCancelled: "false"
@@ -388,7 +407,6 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [googleWalletJWTUrl]
       where: id
-
   extraOperations:
     - EXTRA_QUERY_FILE
 # Make use of FareBreakup to store the fare breakup of a ticket
@@ -582,12 +600,16 @@ FRFSConfig:
     cancellationReasonId: Maybe Text
     straightLineDistance: Meters
     radius: Meters
+    providerId: Maybe Text
+    providerName: Maybe Text
+    validTillSeconds: Seconds
 
   beamType:
     isCancellationAllowed: Maybe Bool
     busStationTtl: Maybe Seconds
     straightLineDistance: Maybe Meters
     radius: Maybe Meters
+    validTillSeconds: Maybe Seconds
 
   queries:
     findByMerchantOperatingCityId:
@@ -605,18 +627,21 @@ FRFSConfig:
     busStationTtl: "1800"
     straightLineDistance: "5000"
     radius: "3000"
+    validTillSeconds: "300"
 
   fromTType:
     isCancellationAllowed: Kernel.Prelude.fromMaybe True|I
     busStationTtl: Kernel.Prelude.fromMaybe (Kernel.Types.Time.Seconds 1800)|I
     straightLineDistance: Kernel.Prelude.fromMaybe  (Kernel.Types.Distance.Meters 5000)|I
     radius: Kernel.Prelude.fromMaybe (Kernel.Types.Distance.Meters 3000)|I
+    validTillSeconds: Kernel.Prelude.fromMaybe (Kernel.Types.Time.Seconds 300)|I
 
   toTType:
     isCancellationAllowed: Kernel.Prelude.Just|I
     busStationTtl: Kernel.Prelude.Just|I
     straightLineDistance: Kernel.Prelude.Just|I
     radius: Kernel.Prelude.Just|I
+    validTillSeconds: Kernel.Prelude.Just|I
 
 Route:
   tableName: route

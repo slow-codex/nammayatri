@@ -6,14 +6,18 @@ imports:
   PriceAPIEntity : Kernel.Types.Common
   FRFSStationAPI : API.Types.UI.FRFSTicketService
   MultimodalTravelMode : Domain.Types.Trip
-  Location : Domain.Types.Location
+  LocationAPIEntity : Domain.Types.Location
   LegInfo: Lib.JourneyModule.Types
   JourneyLeg: Domain.Types.JourneyLeg
   LatLong: Kernel.External.Maps.Types
+  LatLngV2: Kernel.External.Maps.Google.MapsClient.Types
   Price: Kernel.Types.Common
   JourneyLegStatus : Lib.JourneyLeg.Types
+  UnifiedTicketQR: Lib.JourneyModule.Types
   FRFSBookingPaymentStatusAPI: API.Types.UI.FRFSTicketService
   CreateOrderResp: Kernel.External.Payment.Juspay.Types
+  ExtendLegStartPoint: Lib.JourneyModule.Types
+  GetFareResponse: Lib.JourneyModule.Types
 
 module: MultimodalConfirm
 
@@ -23,20 +27,35 @@ types:
     estimatedMinFare: PriceAPIEntity
     estimatedMaxFare: PriceAPIEntity
     estimatedDistance: Distance
+    journeyStatus: Domain.Types.Journey.JourneyStatus
+    unifiedQR: Maybe UnifiedTicketQR
     legs: [LegInfo]
 
   LegStatus:
     legOrder: Int
     status: JourneyLegStatus
+    vehiclePosition: Maybe LatLong
+    userPosition: Maybe LatLong
 
-  JourneyStatus:
-    recordType: NewType
+  JourneyStatusResp:
+    journeyStatus: Domain.Types.Journey.JourneyStatus
     legs: "[LegStatus]"
 
   ExtendLegReq:
-    legId: Id JourneyLeg
-    endLeg: Id JourneyLeg
-    endLocation: Maybe LatLong                          # if some other dest outside of journey
+    distance: Distance
+    duration : Seconds
+    fare: GetFareResponse
+    startLocation: ExtendLegStartPoint
+    endLocation: Maybe LocationAPIEntity
+
+  ExtendLegGetFareReq:
+    startLocation: ExtendLegStartPoint
+    endLocation: Maybe LocationAPIEntity
+
+  ExtendLegGetFareResp:
+    totalFare : Maybe GetFareResponse
+    distance : Distance
+    duration : Seconds
 
   RiderLocationReq:
     latLong: LatLong
@@ -44,7 +63,9 @@ types:
 
   SwitchLegReq:
     newMode: MultimodalTravelMode
-    currLocation: LatLong
+    legOrder : Int
+    startLocation : Maybe LatLngV2
+    originAddress: Maybe LocationAddress
 
   SwitchTaxiReq:
     estimateId: Id Estimate
@@ -57,6 +78,16 @@ types:
     sdkPayload: Maybe CreateOrderResp
     status: FRFSBookingPaymentStatusAPI
 
+  JourneyFeedBackForm:
+    rating: Maybe Int
+    rateTravelMode: [RateMultiModelTravelModes]
+    additionalFeedBack: Maybe Text
+
+  RateMultiModelTravelModes:
+    travelMode: MultimodalTravelMode
+    isExperienceGood: Maybe Bool
+    legOrder: Int
+
 apis:
   - POST:
       endpoint: /multimodal/{journeyId}/initiate
@@ -68,6 +99,8 @@ apis:
       endpoint: /multimodal/{journeyId}/confirm
       params:
         journeyId: Id Journey
+      query:
+        forceBookLegOrder: Int
       response:
         type: Kernel.Types.APISuccess.APISuccess
   - GET:
@@ -84,19 +117,19 @@ apis:
         type: JourneyBookingPaymentStatus
 
   - POST:
-      endpoint: /multimodal/{legId}/switch                          # combine with other legs if they match
+      endpoint: /multimodal/{journeyId}/switch                          # combine with other legs if they match
       params:
-        legId: Text
+        journeyId: Id Journey
       request:
         type: SwitchLegReq
       response:
         type: Kernel.Types.APISuccess.APISuccess                    # send new leg
 
   - POST:
-      endpoint: multimodal/journey/{journeyId}/leg/{legId}/skip
+      endpoint: multimodal/journey/{journeyId}/leg/{legOrder}/skip
       params:
         journeyId: Id Journey
-        legId: Id JourneyLeg
+        legOrder: Int
       response:
         type: Kernel.Types.APISuccess.APISuccess
 
@@ -105,17 +138,25 @@ apis:
       request:
         type: ExtendLegReq
       params:
-        legId: Text
         journeyId: Id Journey
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: /multimodal/extend/{journeyId}/leg/getfare                    # only applicable for current leg
+      request:
+        type: ExtendLegGetFareReq
+      params:
+        journeyId: Id Journey
+      response:
+        type: ExtendLegGetFareResp
 
   - GET:
       endpoint: /multimodal/journey/{journeyId}/status
       params:
         journeyId: Id Journey
       response:
-        type: JourneyStatus
+        type: JourneyStatusResp
 
   - POST:
       endpoint: multimodal/journey/{journeyId}/cancel
@@ -131,7 +172,7 @@ apis:
       request:
         type: RiderLocationReq
       response:
-        type: JourneyStatus
+        type: JourneyStatusResp
 
   - POST:
       endpoint: multimodal/{journeyId}/order/{legOrder}/switchTaxi
@@ -142,3 +183,12 @@ apis:
         type: SwitchTaxiReq
       response:
         type: JourneyInfoResp
+
+  - POST:
+      endpoint: multimodal/{journeyId}/journeyFeedback
+      params:
+        journeyId: Id Journey
+      request:
+        type: JourneyFeedBackForm
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

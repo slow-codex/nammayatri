@@ -225,8 +225,8 @@ data JourneyLeg = JourneyLeg
     toStationCode :: Maybe Text,
     color :: Maybe Text,
     colorCode :: Maybe Text,
-    duration :: Seconds,
-    distance :: Distance
+    duration :: Maybe Seconds,
+    distance :: Maybe Distance
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -392,7 +392,7 @@ getJourneys searchRequest = do
               { totalMinFare = estimatedMinFare,
                 totalMaxFare = estimatedMaxFare,
                 modes = journey.modes,
-                journeyLegs,
+                journeyLegs = sortBy (comparing (.journeyLegOrder)) journeyLegs,
                 startTime = journey.startTime,
                 endTime = journey.endTime,
                 journeyId = journey.id,
