@@ -47,7 +47,9 @@ ALTER TABLE atlas_app.journey ADD COLUMN status text ;
 
 
 ------- SQL updates -------
-ALTER TABLE atlas_app.journey ADD COLUMN rider_id character varying(36) NOT NULL default "";
+ALTER TABLE atlas_app.journey ADD COLUMN rider_id character varying(36) NOT NULL default '';
+
+ALTER TABLE atlas_app.journey ADD COLUMN is_payment_success boolean ;
 
 
 ------- SQL updates -------
@@ -55,10 +57,5 @@ ALTER TABLE atlas_app.journey ADD COLUMN rider_id character varying(36) NOT NULL
 
 
 
-------- SQL updates -------
 
-
-
-
-------- SQL updates -------
 

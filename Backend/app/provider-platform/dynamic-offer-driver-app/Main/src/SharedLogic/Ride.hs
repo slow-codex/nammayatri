@@ -17,7 +17,6 @@ module SharedLogic.Ride where
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
-import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Common as SReqD
 import qualified Domain.Types.DriverGoHomeRequest as DGetHomeRequest
 import qualified Domain.Types.DriverInformation as DDI
@@ -73,7 +72,7 @@ initializeRide ::
   DBooking.Booking ->
   Maybe Text ->
   Maybe Bool ->
-  Maybe (Id DC.Client) ->
+  Maybe Text ->
   Maybe Bool ->
   Flow (DRide.Ride, SRD.RideDetails, DVeh.Vehicle)
 initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId enableOtpLessRide = do
@@ -182,7 +181,7 @@ buildRide ::
   Maybe (Id DGetHomeRequest.DriverGoHomeRequest) ->
   Text ->
   Maybe Bool ->
-  Maybe (Id DC.Client) ->
+  Maybe Text ->
   Maybe DDI.DriverInformation ->
   UTCTime ->
   DVeh.Vehicle ->
@@ -389,5 +388,10 @@ getArrivalTimeBufferOfVehicle bufferJson serviceTier =
     DST.HERITAGE_CAB -> buffer.heritagecab
     DST.EV_AUTO_RICKSHAW -> buffer.evautorickshaw
     DST.DELIVERY_LIGHT_GOODS_VEHICLE -> buffer.deliveryLightGoodsVehicle
+    DST.DELIVERY_TRUCK_MINI -> buffer.deliveryLightGoodsVehicle
+    DST.DELIVERY_TRUCK_SMALL -> buffer.deliveryLightGoodsVehicle
+    DST.DELIVERY_TRUCK_MEDIUM -> buffer.deliveryLightGoodsVehicle
+    DST.DELIVERY_TRUCK_LARGE -> buffer.deliveryLightGoodsVehicle
+    DST.DELIVERY_TRUCK_ULTRA_LARGE -> buffer.deliveryLightGoodsVehicle
     DST.BUS_NON_AC -> buffer.busNonAc
     DST.BUS_AC -> buffer.busAc

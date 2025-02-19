@@ -1235,7 +1235,7 @@ getTa =
     , enter_referral_code: "பரிந்துரை குறியீட்டை உள்ளிடவும்"
     , have_a_referral_code: "பரிந்துரை குறியீடு உள்ளதா?"
     , complete_steps_to_apply_referral: "பரிந்துரை குறியீட்டைப் பயன்படுத்த மேலே உள்ள படிகளை முடிக்கவும்"
-    , download_namma_yatri: (\_ -> "நம்ம யாத்ரி பதிவிறக்கம்")
+    , download_namma_yatri: (\appName -> appName <> " பதிவிறக்கம்")
     , enter_code: "குறியீட்டை உள்ளிடவும்"
     , complete_registration: "முழுமையான பதிவு"
     , cant_find_option: "விருப்பத்தைக் கண்டுபிடிக்க முடியவில்லை"
@@ -1711,6 +1711,7 @@ getTa =
     , your_ride_starts_in: "உங்கள் பயணம் இல் தொடங்குகிறது"
     , away: " தொலைவில்"
     , intercity: "நகரங்களுக்கிடையிலான"
+    , local: "உள்ளகம்"
     , intercity_return: "நகரங்களுக்கிடையிலான திரும்ப"
     , rental: "வாடகை"
     , regular: "சாதாரண"

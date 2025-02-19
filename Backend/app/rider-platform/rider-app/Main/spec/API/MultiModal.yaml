@@ -18,6 +18,7 @@ imports:
   CreateOrderResp: Kernel.External.Payment.Juspay.Types
   ExtendLegStartPoint: Lib.JourneyModule.Types
   GetFareResponse: Lib.JourneyModule.Types
+  BookingUpdateRequest: Domain.Types.BookingUpdateRequest
 
 module: MultimodalConfirm
 
@@ -30,6 +31,8 @@ types:
     journeyStatus: Domain.Types.Journey.JourneyStatus
     unifiedQR: Maybe UnifiedTicketQR
     legs: [LegInfo]
+    startTime: Maybe UTCTime
+    endTime: Maybe UTCTime
 
   LegStatus:
     legOrder: Int
@@ -40,6 +43,7 @@ types:
   JourneyStatusResp:
     journeyStatus: Domain.Types.Journey.JourneyStatus
     legs: "[LegStatus]"
+    journeyPaymentStatus: Maybe FRFSBookingPaymentStatusAPI
 
   ExtendLegReq:
     distance: Distance
@@ -47,6 +51,7 @@ types:
     fare: GetFareResponse
     startLocation: ExtendLegStartPoint
     endLocation: Maybe LocationAPIEntity
+    bookingUpdateRequestId: Maybe (Id BookingUpdateRequest)
 
   ExtendLegGetFareReq:
     startLocation: ExtendLegStartPoint
@@ -55,7 +60,8 @@ types:
   ExtendLegGetFareResp:
     totalFare : Maybe GetFareResponse
     distance : Distance
-    duration : Seconds
+    duration : Maybe Seconds
+    bookingUpdateRequestId : Maybe (Id BookingUpdateRequest)
 
   RiderLocationReq:
     latLong: LatLong
@@ -84,7 +90,7 @@ types:
     additionalFeedBack: Maybe Text
 
   RateMultiModelTravelModes:
-    travelMode: MultimodalTravelMode
+    travelMode: Maybe MultimodalTravelMode
     isExperienceGood: Maybe Bool
     legOrder: Int
 
@@ -127,6 +133,14 @@ apis:
 
   - POST:
       endpoint: multimodal/journey/{journeyId}/leg/{legOrder}/skip
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: multimodal/journey/{journeyId}/leg/{legOrder}/addSkippedLeg
       params:
         journeyId: Id Journey
         legOrder: Int
@@ -192,3 +206,10 @@ apis:
         type: JourneyFeedBackForm
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
+  - GET:
+      endpoint: multimodal/{journeyId}/feedback
+      params:
+        journeyId: Id Journey
+      response:
+        type: (Maybe JourneyFeedBackForm)

@@ -133,7 +133,7 @@ import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Resources.LocalizableV2.Strings (getEN)
+import Resources.LocalizableV2.Strings (getEN, getStringV2)
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
 import Screens.HomeScreen.Controller ( checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval2, flowWithoutOffers, getPeekHeight, checkRecentRideVariant, findingQuotesSearchExpired)
 import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
@@ -202,6 +202,7 @@ import Helpers.Utils as HU
 import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
 import Screens.HomeScreen.ScreenData (dummyNewContacts)
 import Engineering.Helpers.Commons as EHC
+import Resources.LocalizableV2.Types
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -1001,7 +1002,7 @@ trackingCardCallView push state item =
           , gravity CENTER_VERTICAL
           , color Color.black800
           ]
-        , if(item.type == ANONYMOUS_CALLER) then labelView push state else linearLayout[][]
+        , if(item.type == ANONYMOUS_CALLER) then labelView push state (getString RECOMMENDED) state.data.config.showRecommendedText else labelView push state (getStringV2 faster) state.data.config.showFasterText
       ]
       , textView
         $
@@ -1019,15 +1020,15 @@ trackingCardCallView push state item =
         ]
     ]
 
-labelView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-labelView push state =
+labelView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> Boolean ->  PrestoDOM (Effect Unit) w
+labelView push state label toShow =
     linearLayout[
       height WRAP_CONTENT
     , width WRAP_CONTENT
     , cornerRadii $ Corners 8.0 true true true true
     , background Color.green900
     , margin (MarginHorizontal 10 10)
-    , visibility $ boolToVisibility $ state.data.config.showRecommendedText
+    , visibility $ boolToVisibility $ toShow
     ][
       textView $ [
         width WRAP_CONTENT
@@ -1036,7 +1037,7 @@ labelView push state =
       , gravity CENTER
       , padding (Padding 8 1 8 1)
       , textSize FontSize.a_13
-      , text (getString RECOMMENDED)
+      , text label
       ]
     ]
 
@@ -4296,33 +4297,40 @@ highCancellationBanner push state =
   , visibility $ boolToVisibility $ showCancellationHighBanner state.data.cancellationRate
   ]
   [ linearLayout 
-    [ weight 1.0
+    [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , orientation VERTICAL
     , margin $ Margin 14 8 8 8
+    , id $ EHC.getNewIDWithTag "cancellationBannerText"
     ]
     [ textView $
       [ text $ getString YOUR_CANCELLATION_RATE_IS_HIGH
       , color Color.black900
+      , width $ V (((EHC.screenWidth unit) * 2)/ 3)
+      , height WRAP_CONTENT
       ] <> FontStyle.subHeading3 TypoGraphy
     , textView $
       [ text $ getString $ AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName
       , color Color.black900
+      , width $ V (((EHC.screenWidth unit) * 2)/ 3)
       , singleLine false
+      , height WRAP_CONTENT
       , margin $ MarginVertical 4 4
       ] <> FontStyle.body1 TypoGraphy
     ]
+    , linearLayout[weight 1.0][]
     , linearLayout
       [ width WRAP_CONTENT
-      , height MATCH_PARENT
-      , gravity BOTTOM
+      , orientation VERTICAL
+      , height $ V (if contentLayout.height == 0 then 80 else contentLayoutHeight)
       ]
-      [ imageView
+      [ linearLayout[weight 1.0][]
+      , imageView
         [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_cancellation_high"
         , accessibility DISABLE
         , margin $ MarginRight 12
-        , height $ V 60
-        , width $ V 60
+        , height $  V 80
+        , width $ V 80
         ]
       ]
     ]
@@ -4332,6 +4340,8 @@ highCancellationBanner push state =
         let rate = fromMaybe 0.0 cancellationRate
             cancellationThresholdConfig = RemoteConfig.getCancellationBannerThresholdConfig $  DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
         in cancellationThresholdConfig.showBanner && rate >= cancellationThresholdConfig.percentage
+      contentLayoutHeight = HU.getDefaultPixelSize(contentLayout.height + 20)
+      contentLayout = runFn1 JB.getLayoutBounds $ EHC.getNewIDWithTag "cancellationBannerText"
         
 
 suggestionsView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

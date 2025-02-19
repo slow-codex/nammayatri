@@ -118,7 +118,6 @@ import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Client as DC
 import Domain.Types.Common
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverBankAccount as DOBA
@@ -304,6 +303,7 @@ data DriverInformationRes = DriverInformationRes
     canDowngradeToTaxi :: Bool,
     canSwitchToRental :: Bool,
     canSwitchToInterCity :: Bool,
+    canSwitchToIntraCity :: Bool,
     mode :: Maybe DriverInfo.DriverMode,
     payerVpa :: Maybe Text,
     autoPayStatus :: Maybe DriverInfo.DriverAutoPayStatus,
@@ -382,6 +382,7 @@ data DriverEntityRes = DriverEntityRes
     canDowngradeToTaxi :: Bool,
     canSwitchToRental :: Bool,
     canSwitchToInterCity :: Bool,
+    canSwitchToIntraCity :: Bool,
     payerVpa :: Maybe Text,
     mode :: Maybe DriverInfo.DriverMode,
     autoPayStatus :: Maybe DriverInfo.DriverAutoPayStatus,
@@ -429,6 +430,7 @@ data UpdateDriverReq = UpdateDriverReq
     canDowngradeToTaxi :: Maybe Bool,
     canSwitchToRental :: Maybe Bool,
     canSwitchToInterCity :: Maybe Bool,
+    canSwitchToIntraCity :: Maybe Bool,
     clientVersion :: Maybe Version,
     bundleVersion :: Maybe Version,
     gender :: Maybe SP.Gender,
@@ -661,19 +663,20 @@ getInformationV2 ::
     HasField "s3Env" r (S3.S3Env m)
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Maybe Text ->
   Maybe Int ->
   Maybe Text ->
   Maybe Text ->
   UpdateProfileInfoPoints ->
   m DriverInformationRes
-getInformationV2 (personId, merchantId, merchantOpCityId) toss tenant' context req = do
+getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context req = do
   whenJust req.isAdvancedBookingEnabled $ \isAdvancedBookingEnabled ->
     QDriverInformation.updateForwardBatchingEnabled isAdvancedBookingEnabled personId
   whenJust req.isInteroperable $ \isInteroperable ->
     QDriverInformation.updateIsInteroperable isInteroperable personId
   whenJust req.isCategoryLevelSubscriptionEnabled $ \isCategoryLevelSubscriptionEnabled ->
     QDriverPlan.updateIsSubscriptionEnabledAtCategoryLevel personId YATRI_SUBSCRIPTION isCategoryLevelSubscriptionEnabled
-  getInformation (personId, merchantId, merchantOpCityId) toss tenant' context
+  getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context
 
 getInformation ::
   ( CacheFlow m r,
@@ -684,13 +687,15 @@ getInformation ::
     HasField "s3Env" r (S3.S3Env m)
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Maybe Text ->
   Maybe Int ->
   Maybe Text ->
   Maybe Text ->
   m DriverInformationRes
-getInformation (personId, merchantId, merchantOpCityId) toss tnant' context = do
+getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' context = do
   let driverId = cast personId
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  when (isNothing person.clientId && isJust mbClientId) $ QPerson.updateClientId mbClientId person.id
   driverStats <- runInReplica $ QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById (cast driverId)
@@ -940,6 +945,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) = do
         canDowngradeToTaxi = driverInfo.canDowngradeToTaxi,
         canSwitchToRental = driverInfo.canSwitchToRental,
         canSwitchToInterCity = driverInfo.canSwitchToInterCity,
+        canSwitchToIntraCity = driverInfo.canSwitchToIntraCity,
         mode = driverInfo.mode,
         payerVpa = driverPlan >>= (.payerVpa),
         blockStateModifier = driverInfo.blockStateModifier,
@@ -1031,6 +1037,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
           canDowngradeToTaxi = fromMaybe driverInfo.canDowngradeToTaxi req.canDowngradeToTaxi
           canSwitchToRental = fromMaybe driverInfo.canSwitchToRental req.canSwitchToRental
           canSwitchToInterCity = fromMaybe driverInfo.canSwitchToInterCity req.canSwitchToInterCity
+          canSwitchToIntraCity = fromMaybe driverInfo.canSwitchToIntraCity req.canSwitchToIntraCity
           availableUpiApps = req.availableUpiApps <|> driverInfo.availableUpiApps
           selectedServiceTiers =
             case vehicle.variant of
@@ -1054,10 +1061,15 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.HERITAGE_CAB -> [DVST.HERITAGE_CAB]
               DV.EV_AUTO_RICKSHAW -> [DVST.EV_AUTO_RICKSHAW]
               DV.DELIVERY_LIGHT_GOODS_VEHICLE -> [DVST.DELIVERY_LIGHT_GOODS_VEHICLE]
+              DV.DELIVERY_TRUCK_MINI -> [DVST.DELIVERY_TRUCK_MINI]
+              DV.DELIVERY_TRUCK_SMALL -> [DVST.DELIVERY_TRUCK_SMALL]
+              DV.DELIVERY_TRUCK_MEDIUM -> [DVST.DELIVERY_TRUCK_MEDIUM]
+              DV.DELIVERY_TRUCK_LARGE -> [DVST.DELIVERY_TRUCK_LARGE]
+              DV.DELIVERY_TRUCK_ULTRA_LARGE -> [DVST.DELIVERY_TRUCK_ULTRA_LARGE]
               DV.BUS_NON_AC -> [DVST.BUS_NON_AC]
               DV.BUS_AC -> [DVST.BUS_AC]
 
-      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity availableUpiApps person.id
+      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps person.id
       when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi) $
         QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
 
@@ -1187,12 +1199,12 @@ offerQuoteLockKey :: Id Person -> Text
 offerQuoteLockKey driverId = "Driver:OfferQuote:DriverId-" <> driverId.getId
 
 -- DEPRECATED
-offerQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe (Id DC.Client) -> DriverOfferReq -> Flow APISuccess
+offerQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> DriverOfferReq -> Flow APISuccess
 offerQuote (driverId, merchantId, merchantOpCityId) clientId DriverOfferReq {..} = do
   let response = Accept
   respondQuote (driverId, merchantId, merchantOpCityId) clientId Nothing Nothing Nothing Nothing DriverRespondReq {searchRequestId = Nothing, searchTryId = Just searchRequestId, notificationSource = Nothing, renderedAt = Nothing, respondedAt = Nothing, ..}
 
-respondQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe (Id DC.Client) -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> DriverRespondReq -> Flow APISuccess
+respondQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> DriverRespondReq -> Flow APISuccess
 respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion mbClientVersion mbConfigVersion mbDevice req = do
   searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
   searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
@@ -1396,7 +1408,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       sendDriverOffer merchant searchReq sReqFD searchTry driverQuote
       return driverFCMPulledList
 
-acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> SP.Person -> Text -> Maybe HighPrecMoney -> DM.Merchant -> Maybe (Id DC.Client) -> Flow [SearchRequestForDriver]
+acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> SP.Person -> Text -> Maybe HighPrecMoney -> DM.Merchant -> Maybe Text -> Flow [SearchRequestForDriver]
 acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue merchant clientId = do
   whenJust reqOfferedValue $ \_ -> throwError (InvalidRequest "Driver can't offer rental fare")
   quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
@@ -1835,7 +1847,8 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
   let paymentService = subscriptionConfig.paymentServiceName
       sortedInvoices = mergeSortAndRemoveDuplicate invoices
       splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
-  vendorFees <- if splitEnabled then concat <$> mapM (QVF.findAllByDriverFeeId . DDF.id) dueDriverFees else pure []
+  vendorFees' <- if splitEnabled then concat <$> mapM (QVF.findAllByDriverFeeId . DDF.id) dueDriverFees else pure []
+  let vendorFees = map SPayment.roundVendorFee vendorFees'
   clearDueResp <- do
     case sortedInvoices of
       [] -> mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (dueDriverFees, []) Nothing INV.MANUAL_INVOICE Nothing vendorFees mbDeepLinkData splitEnabled
@@ -2371,7 +2384,7 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
 
 acceptScheduledBooking ::
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
-  Maybe (Id DC.Client) ->
+  Maybe Text ->
   Id DRB.Booking ->
   Flow APISuccess
 acceptScheduledBooking (personId, merchantId, _) clientId bookingId = do
@@ -2419,7 +2432,8 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
   let paymentService = subscriptionConfig.paymentServiceName
       sortedInvoices = mergeSortAndRemoveDuplicate invoices
       splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
-  vendorFees <- if splitEnabled then concat <$> mapM (QVF.findAllByDriverFeeId . DDF.id) driverFee else pure []
+  vendorFees' <- if splitEnabled then concat <$> mapM (QVF.findAllByDriverFeeId . DDF.id) driverFee else pure []
+  let vendorFees = map SPayment.roundVendorFee vendorFees'
   resp <- do
     case sortedInvoices of
       [] -> do mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFee, []) Nothing (feeTypeToInvoicetype feeType) Nothing vendorFees mbDeepLinkData splitEnabled

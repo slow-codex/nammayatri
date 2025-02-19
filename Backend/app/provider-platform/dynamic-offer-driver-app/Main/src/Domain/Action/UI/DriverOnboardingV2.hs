@@ -341,12 +341,14 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
           )
           False
           driverVehicleServiceTierTypes
+      canSwitchToIntraCity' = (any (\(st, _) -> st.vehicleCategory == Just DVC.CAR) driverVehicleServiceTierTypes) && (canSwitchToInterCity' || canSwitchToRental')
 
   return $
     API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers
       { tiers = tierOptions,
         canSwitchToRental = if canSwitchToRental' then Just driverInfo.canSwitchToRental else Nothing,
         canSwitchToInterCity = if canSwitchToInterCity' then Just driverInfo.canSwitchToInterCity else Nothing,
+        canSwitchToIntraCity = if canSwitchToIntraCity' then Just driverInfo.canSwitchToIntraCity else Nothing,
         airConditioned = mbAirConditioned
       }
 
@@ -402,7 +404,12 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
           False
           driverVehicleServiceTierTypes
 
-  QDI.updateRentalAndInterCitySwitch canSwitchToRental' canSwitchToInterCity' personId
+      canSwitchToIntraCity' =
+        if (any (\(st, _) -> st.vehicleCategory == Just DVC.CAR) driverVehicleServiceTierTypes) && (canSwitchToInterCity' || canSwitchToRental')
+          then fromMaybe driverInfo.canSwitchToIntraCity canSwitchToIntraCity
+          else True
+
+  QDI.updateRentalInterCityAndIntraCitySwitch canSwitchToRental' canSwitchToInterCity' canSwitchToIntraCity' personId
 
   return Success
 

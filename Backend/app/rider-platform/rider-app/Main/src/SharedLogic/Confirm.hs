@@ -134,7 +134,7 @@ confirm DConfirmReq {..} = do
   when merchant.onlinePayment $ do
     when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
     QPerson.updateDefaultPaymentMethodId paymentMethodId personId -- Make payment method as default payment method for customer
-  activeBooking <- QRideB.findByTransactionIdAndStatus searchRequest.id.getId DRB.activeBookingStatus
+  activeBooking <- QRideB.findLatestSelfAndPartyBookingByRiderId personId --This query also checks for booking parties
   case activeBooking of
     Just booking -> DQuote.processActiveBooking booking OnConfirm
     _ -> pure ()
@@ -278,6 +278,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
   bookingDetails <- buildBookingDetails
   bookingParties <- buildPartiesLinks id
   deploymentVersion <- asks (.version)
+  let (skipBooking, journeyId) = fromMaybe (Nothing, Nothing) $ (\j -> (Just j.skipBooking, Just (Id j.journeyId))) <$> searchRequest.journeyLegInfo
   return $
     ( DRB.Booking
         { id = Id id,
@@ -337,7 +338,8 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           isReferredRide = searchRequest.driverIdentifier $> True,
           journeyLegOrder = searchRequest.journeyLegInfo <&> (.journeyLegOrder),
           isDeleted = Just False,
-          isSkipped = Just False,
+          isSkipped = skipBooking,
+          journeyId,
           ..
         },
       bookingParties

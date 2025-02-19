@@ -129,9 +129,8 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
     then do
       (res, _, mbNewScheduleTimeIn) <- sendSearchRequestToDrivers driverPoolConfig searchTry searchBatchInput goHomeCfg
       let inTime = singleBatchProcessingTempDelay + maybe (fromIntegral driverPoolConfig.singleBatchProcessTime) fromIntegral mbNewScheduleTimeIn
-      case (res, isJust searchReq.driverIdForSearch) of
-        (_, True) -> return ()
-        (ReSchedule _, _) -> scheduleBatching searchTry inTime
+      case res of
+        (ReSchedule _) -> scheduleBatching searchTry inTime
         _ -> return ()
       SharedRedisKeys.setBatchConfig searchReq.transactionId $
         SharedRedisKeys.BatchConfig
@@ -170,7 +169,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
       case tripQuoteDetails of
         [] -> throwError $ InternalError "No trip quote details found"
         (firstQuoteDetail : _) -> do
-          let estimatedFare = firstQuoteDetail.baseFare + fromMaybe 0 customerExtraFee
+          let estimatedFare = firstQuoteDetail.baseFare
           let tripCategory = firstQuoteDetail.tripCategory -- for fallback case
           let serviceTier = firstQuoteDetail.vehicleServiceTier -- for fallback case
           let estOrQuoteId = firstQuoteDetail.estimateOrQuoteId -- for fallback case

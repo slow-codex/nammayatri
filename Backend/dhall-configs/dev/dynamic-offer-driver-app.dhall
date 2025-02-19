@@ -68,6 +68,7 @@ let rcfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
+      , connectReadOnly = True
       }
 
 let rccfg =
@@ -78,6 +79,7 @@ let rccfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
+      , connectReadOnly = True
       }
 
 let smsConfig =
@@ -227,6 +229,7 @@ let AllocatorJobType =
       | WeeklyUpdateTag
       | FleetAlert
       | SendWebhookToExternal
+      | ScheduledFCMS
       >
 
 let jobInfoMapx =
@@ -269,6 +272,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.WeeklyUpdateTag, mapValue = True }
       , { mapKey = AllocatorJobType.FleetAlert, mapValue = False }
       , { mapKey = AllocatorJobType.SendWebhookToExternal, mapValue = True }
+      , { mapKey = AllocatorJobType.ScheduledFCMS, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
@@ -317,7 +321,7 @@ in  { esqDBCfg
     , hedisNonCriticalCfg = rcfg
     , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = False
-    , cutOffHedisCluster = True
+    , cutOffHedisCluster = False
     , port = +8016
     , metricsPort = +9997
     , hostName = "localhost"

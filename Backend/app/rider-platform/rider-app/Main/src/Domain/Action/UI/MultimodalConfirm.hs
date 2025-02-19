@@ -9,13 +9,16 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalJourneyCancel,
     postMultimodalExtendLeg,
     postMultimodalJourneyLegSkip,
+    postMultimodalJourneyLegAddSkippedLeg,
     getMultimodalJourneyStatus,
     postMultimodalExtendLegGetfare,
     postMultimodalJourneyFeedback,
     getActiveJourneyIds,
+    getMultimodalFeedback,
   )
 where
 
+import API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
@@ -242,8 +245,8 @@ postMultimodalExtendLeg ::
   ApiTypes.ExtendLegReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMultimodalExtendLeg (_, _) journeyId req = do
-  JM.extendLeg journeyId req.startLocation req.endLocation Nothing req.fare req.distance req.duration
-  pure Kernel.Types.APISuccess.Success
+  JM.extendLeg journeyId req.startLocation req.endLocation Nothing req.fare req.distance req.duration req.bookingUpdateRequestId
+  return Kernel.Types.APISuccess.Success
 
 postMultimodalExtendLegGetfare ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -267,16 +270,50 @@ postMultimodalJourneyLegSkip (_, _) journeyId legOrder = do
   JM.skipLeg journeyId legOrder
   pure Kernel.Types.APISuccess.Success
 
+postMultimodalJourneyLegAddSkippedLeg ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Int ->
+    Environment.Flow Kernel.Types.APISuccess.APISuccess
+  )
+postMultimodalJourneyLegAddSkippedLeg (_, _) journeyId legOrder = do
+  JM.addSkippedLeg journeyId legOrder
+  pure Kernel.Types.APISuccess.Success
+
 getMultimodalJourneyStatus ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Environment.Flow ApiTypes.JourneyStatusResp
-getMultimodalJourneyStatus (_, _) journeyId = do
+getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsStatus journey
-  return $ ApiTypes.JourneyStatusResp {legs = map transformLeg legs, journeyStatus = journey.status}
+  paymentStatus <-
+    if journey.isPaymentSuccess /= Just True
+      then do
+        personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+        allJourneyFrfsBookings <- QFRFSTicketBooking.findAByJourneyIdCond (Just journeyId)
+        frfsBookingStatusArr <- mapM (FRFSTicketService.frfsBookingStatus (personId, merchantId)) allJourneyFrfsBookings
+        let anyFirstBooking = listToMaybe frfsBookingStatusArr
+            paymentOrder =
+              anyFirstBooking >>= (.payment)
+                <&> ( \p ->
+                        ApiTypes.PaymentOrder {sdkPayload = p.paymentOrder, status = p.status}
+                    )
+            mbPaymentStatus = paymentOrder <&> (.status)
+        whenJust mbPaymentStatus $ \pstatus -> do
+          unless (pstatus == FRFSTicketService.SUCCESS) do
+            void $ QJourney.updatePaymentStatus (Just True) journeyId
+        return $ paymentOrder <&> (.status)
+      else
+        if journey.isPaymentSuccess == Just True
+          then do
+            return (Just FRFSTicketService.SUCCESS)
+          else return Nothing
+  return $ ApiTypes.JourneyStatusResp {legs = map transformLeg legs, journeyStatus = journey.status, journeyPaymentStatus = paymentStatus}
   where
     transformLeg :: JMTypes.JourneyLegState -> ApiTypes.LegStatus
     transformLeg legState =
@@ -308,6 +345,7 @@ postMultimodalJourneyFeedback (mbPersonId, mbMerchantId) journeyId journeyFeedba
         JLFB.JourneyLegsFeedbacks
           { isExperienceGood = feedbackEntry.isExperienceGood,
             journeyId = journeyId,
+            travelMode = feedbackEntry.travelMode,
             legOrder = feedbackEntry.legOrder,
             merchantId = Just mbMerchantId,
             merchantOperatingCityId = journey.merchantOperatingCityId,
@@ -319,3 +357,31 @@ postMultimodalJourneyFeedback (mbPersonId, mbMerchantId) journeyId journeyFeedba
   SQJLFB.createMany $ map mkJourneyLegsFeedback journeyFeedbackForm.rateTravelMode
   JM.updateJourneyStatus journey Domain.Types.Journey.COMPLETED
   pure Kernel.Types.APISuccess.Success
+
+getMultimodalFeedback :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Environment.Flow (Kernel.Prelude.Maybe ApiTypes.JourneyFeedBackForm)
+getMultimodalFeedback (mbPersonId, _) journeyId = do
+  _ <- JM.getJourney journeyId
+  _ <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  feedBackForjourney' <- SQJFB.findByJourneyId journeyId
+  case feedBackForjourney' of
+    Just feedBackForjourney -> do
+      ratingForLegs' <- SQJLFB.findAllByJourneyId journeyId
+      let ratingForLegs = map mkRatingForLegs ratingForLegs'
+      return $ Just (mkFeedbackFormData feedBackForjourney ratingForLegs)
+    Nothing -> return Nothing
+  where
+    mkFeedbackFormData :: JFB.JourneyFeedback -> [ApiTypes.RateMultiModelTravelModes] -> ApiTypes.JourneyFeedBackForm
+    mkFeedbackFormData feedBackForjourney ratingForLegs = do
+      ApiTypes.JourneyFeedBackForm
+        { rating = feedBackForjourney.rating,
+          additionalFeedBack = feedBackForjourney.additionalFeedBack,
+          rateTravelMode = ratingForLegs
+        }
+
+    mkRatingForLegs :: JLFB.JourneyLegsFeedbacks -> ApiTypes.RateMultiModelTravelModes
+    mkRatingForLegs ratingForLeg =
+      ApiTypes.RateMultiModelTravelModes
+        { isExperienceGood = ratingForLeg.isExperienceGood,
+          legOrder = ratingForLeg.legOrder,
+          travelMode = ratingForLeg.travelMode
+        }

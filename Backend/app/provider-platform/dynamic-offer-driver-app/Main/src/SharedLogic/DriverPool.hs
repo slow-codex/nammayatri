@@ -635,7 +635,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
         Just thresholdToIgnoreActualDistanceThreshold -> (distanceToPickup <= thresholdToIgnoreActualDistanceThreshold) || (getMeters estDist.actualDistanceToPickup <= fromIntegral threshold)
         Nothing -> getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
 
-    makeDriverPoolRes QP.NearestGoHomeDriversResult {..} = DriverPoolResult {distanceToPickup = distanceToDriver, customerTags = Nothing, ..}
+    makeDriverPoolRes QP.NearestGoHomeDriversResult {..} = DriverPoolResult {distanceToPickup = distanceToDriver, customerTags = Nothing, score = Nothing, ..}
 
     getRoutesForAllDrivers =
       mapM
@@ -684,6 +684,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
         { distanceToPickup = distanceToDriver,
           serviceTier = serviceTier',
           customerTags = Nothing,
+          score = Nothing,
           ..
         }
 
@@ -750,6 +751,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
       DriverPoolResult
         { distanceToPickup = distanceToDriver,
           customerTags = Nothing,
+          score = Nothing,
           ..
         }
 
@@ -881,6 +883,11 @@ getVehicleAvgSpeed variant avgSpeedOfVehicle = case variant of
   DVeh.HERITAGE_CAB -> avgSpeedOfVehicle.heritagecab
   DVeh.EV_AUTO_RICKSHAW -> avgSpeedOfVehicle.evautorickshaw
   DVeh.DELIVERY_LIGHT_GOODS_VEHICLE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle
+  DVeh.DELIVERY_TRUCK_MINI -> avgSpeedOfVehicle.deliveryLightGoodsVehicle
+  DVeh.DELIVERY_TRUCK_SMALL -> avgSpeedOfVehicle.deliveryLightGoodsVehicle
+  DVeh.DELIVERY_TRUCK_MEDIUM -> avgSpeedOfVehicle.deliveryLightGoodsVehicle
+  DVeh.DELIVERY_TRUCK_LARGE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle
+  DVeh.DELIVERY_TRUCK_ULTRA_LARGE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle
   DVeh.BUS_NON_AC -> avgSpeedOfVehicle.busNonAc
   DVeh.BUS_AC -> avgSpeedOfVehicle.busAc
 
@@ -991,10 +998,11 @@ calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq
         { lat = previousRideDropLat,
           lon = previousRideDropLon,
           customerTags = Nothing,
+          score = Nothing,
           ..
         }
     calculateActualDistanceCurrently _driverToDestinationDistanceThreshold DriverPoolResultCurrentlyOnRide {..} = do
-      let temp = DriverPoolResult {customerTags = Nothing, ..}
+      let temp = DriverPoolResult {customerTags = Nothing, score = Nothing, ..}
       computeActualDistanceOneToOne driverPoolCfg.distanceUnit merchantId merchantOperatingCityId (Just $ LatLong previousRideDropLat previousRideDropLon) (LatLong previousRideDropLat previousRideDropLon) temp
     combine driverToDestinationDistanceThreshold (DriverPoolWithActualDistResult {actualDistanceToPickup = x, actualDurationToPickup = y, previousDropGeoHash = pDGeoHash}, DriverPoolWithActualDistResult {..}) =
       if actualDistanceToPickup < driverToDestinationDistanceThreshold
@@ -1009,7 +1017,7 @@ calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq
               }
         else Nothing
     calculateActualDistanceCurrentlyOneToOneSrcAndDestMapping driverPoolCurrentlyOnRide = do
-      let driverPoolResultsWithDriverLocationAsCurrentLocation = map (\DriverPoolResultCurrentlyOnRide {..} -> DriverPoolResult {customerTags = Nothing, ..}) driverPoolCurrentlyOnRide
+      let driverPoolResultsWithDriverLocationAsCurrentLocation = map (\DriverPoolResultCurrentlyOnRide {..} -> DriverPoolResult {customerTags = Nothing, score = Nothing, ..}) driverPoolCurrentlyOnRide
       let mbPreviousRideDropLatLn = NE.toList $ map (\DriverPoolResultCurrentlyOnRide {..} -> Just $ LatLong previousRideDropLat previousRideDropLon) driverPoolCurrentlyOnRide
       let previousRideDropLatLn = NE.fromList $ catMaybes mbPreviousRideDropLatLn
       computeActualDistanceOneToOneSrcAndDestMapping driverPoolCfg.distanceUnit merchantId merchantOperatingCityId previousRideDropLatLn mbPreviousRideDropLatLn driverPoolResultsWithDriverLocationAsCurrentLocation

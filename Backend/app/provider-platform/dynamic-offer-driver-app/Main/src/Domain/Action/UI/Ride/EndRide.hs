@@ -427,7 +427,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                 fork "ride-interpolation" $ do
                   interpolatedPoints <- getInterpolatedPoints updRide.driverId
                   let rideInterpolationData = RideInterpolationData {interpolatedPoints = interpolatedPoints, rideId = updRide.id}
-                  when (isJust updRide.driverDeviatedToTollRoute && tollConfidence == Just Sure && maybe True (== 0) tollCharges && isJust updRide.estimatedTollCharges) $ pushToKafka rideInterpolationData "ride-interpolated-waypoints" updRide.id.getId
+                  when (isJust updRide.driverDeviatedToTollRoute && tollConfidence == Just Sure && ((maybe True (== 0) tollCharges && isJust updRide.estimatedTollCharges) || fromMaybe False (((,) <$> tollCharges <*> updRide.estimatedTollCharges) <&> \(tollCharges', estimatedTollCharges') -> tollCharges' /= estimatedTollCharges'))) $ pushToKafka rideInterpolationData "ride-interpolated-waypoints" updRide.id.getId
 
                 let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollConfidence = tollConfidence, distanceCalculationFailed = Just distanceCalculationFailed}
 
@@ -725,5 +725,10 @@ shouldUpwardRecompute thresholdConfig estimatedDistance distanceDiff = do
 isUnloadingTimeRequired :: DVST.ServiceTierType -> Bool
 isUnloadingTimeRequired str =
   str
-    `elem` [ DVST.DELIVERY_LIGHT_GOODS_VEHICLE
+    `elem` [ DVST.DELIVERY_LIGHT_GOODS_VEHICLE,
+             DVST.DELIVERY_TRUCK_MINI,
+             DVST.DELIVERY_TRUCK_SMALL,
+             DVST.DELIVERY_TRUCK_MEDIUM,
+             DVST.DELIVERY_TRUCK_LARGE,
+             DVST.DELIVERY_TRUCK_ULTRA_LARGE
            ]

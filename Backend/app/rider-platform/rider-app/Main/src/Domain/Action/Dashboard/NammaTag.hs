@@ -3,10 +3,11 @@ module Domain.Action.Dashboard.NammaTag
     postNammaTagTagUpdate,
     deleteNammaTagTagDelete,
     postNammaTagQueryCreate,
+    postNammaTagQueryUpdate,
+    deleteNammaTagQueryDelete,
     postNammaTagAppDynamicLogicVerify,
     getNammaTagAppDynamicLogic,
     postNammaTagRunJob,
-    Handle.kaalChakraHandle,
     postNammaTagTimeBoundsCreate,
     deleteNammaTagTimeBoundsDelete,
     getNammaTagAppDynamicLogicGetLogicRollout,
@@ -21,7 +22,6 @@ where
 
 import qualified Dashboard.Common as Common
 import Data.Singletons
-import qualified Domain.Action.Dashboard.NammaTag.Handle as Handle
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import qualified Environment
@@ -58,6 +58,12 @@ deleteNammaTagTagDelete _merchantShortId _opCity tagName = YudhishthiraFlow.dele
 postNammaTagQueryCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ChakraQueriesAPIEntity -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postNammaTagQueryCreate _merchantShortId _opCity req = YudhishthiraFlow.postQueryCreate req
 
+postNammaTagQueryUpdate :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ChakraQueryUpdateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagQueryUpdate _merchantShortId _opCity = YudhishthiraFlow.postQueryUpdate
+
+deleteNammaTagQueryDelete :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ChakraQueryDeleteReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+deleteNammaTagQueryDelete _merchantShortId _opCity = YudhishthiraFlow.queryDelete
+
 postNammaTagAppDynamicLogicVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.AppDynamicLogicReq -> Environment.Flow LYT.AppDynamicLogicResp)
 postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
@@ -91,9 +97,9 @@ postNammaTagRunJob merchantShortId opCity req = do
         unless (castChakra jobType == Just req.chakra) do
           throwError (InvalidRequest "Invalid job type")
         QDBJ.markAsComplete oldJobId
-
+  let kaalChakraHandle = Chakras.mkKaalChakraHandle mbMerchantId mbMerchantOpCityId
   case req.action of
-    LYT.RUN -> YudhishthiraFlow.postRunKaalChakraJob Handle.kaalChakraHandle req
+    LYT.RUN -> YudhishthiraFlow.postRunKaalChakraJob kaalChakraHandle req
     LYT.SCHEDULE scheduledTime -> do
       now <- getCurrentTime
       when (scheduledTime <= now) $
@@ -102,7 +108,7 @@ postNammaTagRunJob merchantShortId opCity req = do
         LYT.ALL_USERS -> pure ()
         _ -> throwError (InvalidRequest "Schedule job available only for all users")
       let jobData = LYT.mkKaalChakraJobData req
-      Chakras.createFetchUserDataJob mbMerchantId mbMerchantOpCityId req.chakra jobData scheduledTime
+      kaalChakraHandle.createFetchUserDataJob req.chakra jobData scheduledTime
 
       logInfo $ "Scheduled new " <> show req.chakra <> " job"
       pure $ LYT.RunKaalChakraJobRes {eventId = Nothing, tags = Nothing, users = Nothing, chakraBatchState = LYT.Completed}

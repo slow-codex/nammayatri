@@ -1221,7 +1221,7 @@ getOd =
     , enter_referral_code: "ରେଫରାଲ କୋଡ୍ ପ୍ରବେଶ କରନ୍ତୁ"
     , have_a_referral_code: "ରେଫରାଲ କୋଡ୍ ଅଛି କି?"
     , complete_steps_to_apply_referral: "ରେଫରାଲ କୋଡ୍ ଲାଗୁ କରିବାକୁ ଉପରୋକ୍ତ ପଦକ୍ଷେପଗୁଡିକ ସମାପ୍ତ କରନ୍ତୁ"
-    , download_namma_yatri: (\_ -> "ନମ୍ମା ଯାତ୍ରି ଡାଉନଲୋଡ୍ କରନ୍ତୁ")
+    , download_namma_yatri: (\appName -> appName <> " ଡାଉନଲୋଡ୍ କରନ୍ତୁ")
     , enter_code: "କୋଡ୍ ପ୍ରବେଶ କରନ୍ତୁ"
     , complete_registration: "ପଞ୍ଜିକରଣ ସମାପ୍ତ କରନ୍ତୁ"
     , help_faq: "ସହଯୋଗ"
@@ -1692,6 +1692,7 @@ getOd =
     , your_ride_starts_in: "ଆପଣଙ୍କର ରାଇଡ୍ ଆରମ୍ଭ ହେବ"
     , away: " ଦୂରେ"
     , intercity: "ଇଣ୍ଟରସିଟି"
+    , local: "ସ୍ଥାନୀୟ"
     , intercity_return: "ଇଣ୍ଟରସିଟି ଫେରିବା"
     , rental: "ଭାଡା"
     , regular: "ନିୟମିତ"

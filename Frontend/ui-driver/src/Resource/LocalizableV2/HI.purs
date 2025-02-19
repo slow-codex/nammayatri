@@ -1235,7 +1235,7 @@ getHi =
     , enter_referral_code: "रेफरल कोड दर्ज करें"
     , have_a_referral_code: "क्या आपके पास रेफरल कोड है?"
     , complete_steps_to_apply_referral: "रेफरल कोड लागू करने के लिए उपरोक्त चरणों को पूरा करें"
-    , download_namma_yatri: (\_ -> "नम्मा यात्री डाउनलोड करें")
+    , download_namma_yatri: (\appName -> appName <> " डाउनलोड करें")
     , enter_code: "कोड दर्ज करें"
     , complete_registration: "पूरा पंजीकरण"
     , cant_find_option: "विकल्प नहीं मिल सका"
@@ -1711,6 +1711,7 @@ getHi =
     , your_ride_starts_in: "आपकी सवारी में शुरू होती है"
     , away: " दूर"
     , intercity: "अंतर-शहर"
+    , local: "स्थानीय"
     , intercity_return: "अंतर-शहर वापसी"
     , rental: "किराया"
     , regular: "नियमित"

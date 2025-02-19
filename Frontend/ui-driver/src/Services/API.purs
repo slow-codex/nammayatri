@@ -72,7 +72,8 @@ newtype TriggerOTPReq = TriggerOTPReq {
   merchantId :: String,
   merchantOperatingCity :: Maybe String,
   registrationLat :: Maybe Number,
-  registrationLon :: Maybe Number
+  registrationLon :: Maybe Number,
+  packageName :: String
 }
 
 newtype TriggerOTPResp = TriggerOTPResp {
@@ -465,6 +466,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , operatingCity         :: Maybe String
     , isVehicleSupported    :: Maybe Boolean
     , canSwitchToRental     :: Maybe Boolean
+    , canSwitchToIntraCity  :: Maybe Boolean
     , checkIfACWorking      :: Maybe Boolean
     , canSwitchToInterCity  :: Maybe Boolean
     , payoutVpa             :: Maybe String 
@@ -981,6 +983,7 @@ type UpdateDriverInfoReqEntity =
   , vehicleName :: Maybe String
   , availableUpiApps :: Maybe String
   , canSwitchToRental :: Maybe Boolean
+  , canSwitchToIntraCity :: Maybe Boolean
   , canSwitchToInterCity :: Maybe Boolean
   , isSpecialLocWarrior :: Maybe Boolean
   }
@@ -1407,6 +1410,8 @@ instance standardEncodeFlowStatus :: StandardEncode FlowStatus
 
 data MessageListReq = MessageListReq String String
 
+data GetMessageReq = GetMessageReq String
+
 newtype MessageListRes = MessageListRes (Array MessageAPIEntityResponse)
 
 newtype MessageAPIEntityResponse = MessageAPIEntityResponse
@@ -1444,11 +1449,21 @@ instance makeMessageListReq :: RestEndpoint MessageListReq where
     makeRequest reqBody@(MessageListReq limit offset) headers = defaultMakeRequestWithoutLogs GET (EP.messageList limit offset) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
+instance makeGetMessageReq:: RestEndpoint GetMessageReq where
+    makeRequest reqBody@(GetMessageReq id) headers = defaultMakeRequestWithoutLogs GET (EP.getMessage id) headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
 derive instance genericMessageListReq :: Generic MessageListReq _
 instance showMessageListReq :: Show MessageListReq where show = genericShow
 instance standardEncodeMessageListReq :: StandardEncode MessageListReq where standardEncode (MessageListReq _ _) = standardEncode {}
 instance decodeMessageListReq :: Decode MessageListReq where decode = defaultDecode
 instance encodeMessageListReq :: Encode MessageListReq where encode = defaultEncode
+
+derive instance genericGetMessageReq :: Generic GetMessageReq _
+instance showGetMessageReq :: Show GetMessageReq where show = genericShow
+instance standardEncodeGetMessageReq :: StandardEncode GetMessageReq where standardEncode (GetMessageReq _) = standardEncode {}
+instance decodeGetMessageReq :: Decode GetMessageReq where decode = defaultDecode
+instance encodeGetMessageReq :: Encode GetMessageReq where encode = defaultEncode
 
 derive instance genericMessageListRes :: Generic MessageListRes _
 derive instance newtypeMessageListRes :: Newtype MessageListRes _
@@ -4408,6 +4423,7 @@ data ServiceTierType
   | TAXI
   | TAXI_PLUS
   | RENTALS
+  | LOCAL
   | INTERCITY
   | BIKE_TIER
   | SUV_PLUS_TIER
@@ -4437,6 +4453,7 @@ newtype DriverVehicleServiceTierResponse = DriverVehicleServiceTierResponse {
   tiers :: Array DriverVehicleServiceTier,
   airConditioned :: Maybe AirConditionedTier,
   canSwitchToInterCity :: Maybe Boolean,
+  canSwitchToIntraCity :: Maybe Boolean,
   canSwitchToRental :: Maybe Boolean
 }
 
@@ -4477,6 +4494,7 @@ instance decodeServiceTierType :: Decode ServiceTierType
                   "TAXI_PLUS"    -> except $ Right TAXI_PLUS
                   "RENTALS"      -> except $ Right RENTALS
                   "INTERCITY"    -> except $ Right INTERCITY
+                  "LOCAL"        -> except $ Right LOCAL
                   "BIKE"         -> except $ Right BIKE_TIER
                   "SUV_PLUS"     -> except $ Right SUV_PLUS_TIER
                   "DELIVERY_BIKE" -> except $ Right DELIVERY_BIKE
@@ -4503,6 +4521,7 @@ instance standardEncodeServiceTierType :: StandardEncode ServiceTierType
     standardEncode BIKE_TIER = standardEncode "BIKE"
     standardEncode DELIVERY_BIKE = standardEncode "DELIVERY_BIKE"
     standardEncode RENTALS = standardEncode "RENTALS"
+    standardEncode LOCAL = standardEncode "LOCAL"
     standardEncode INTERCITY = standardEncode "INTERCITY"
     standardEncode SUV_PLUS_TIER = standardEncode "SUV_PLUS"
     standardEncode AMBULANCE_TAXI_TIER = standardEncode "AMBULANCE_TAXI"

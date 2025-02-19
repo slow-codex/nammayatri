@@ -27,6 +27,11 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking] -> m ())
 createMany = traverse_ create
 
+findAByJourneyIdCond ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey) -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
+findAByJourneyIdCond journeyId = do findAllWithKVAndConditionalDB [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId <$> journeyId)] Nothing
+
 findAllByJourneyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey) -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
 findAllByJourneyId journeyId = do findAllWithKV [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId <$> journeyId)]
 
@@ -167,7 +172,6 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.estimatedPrice ((.amount) estimatedPrice),
       Se.Set Beam.eventDiscountAmount eventDiscountAmount,
       Se.Set Beam.finalPrice (Kernel.Prelude.fmap (.amount) finalPrice),
-      Se.Set Beam.frequency frequency,
       Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
       Se.Set Beam.googleWalletJWTUrl googleWalletJWTUrl,
       Se.Set Beam.isBookingCancellable isBookingCancellable,
@@ -178,15 +182,12 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.journeyLegOrder journeyLegOrder,
       Se.Set Beam.journeyLegStatus journeyLegStatus,
       Se.Set Beam.journeyOnInitDone journeyOnInitDone,
-      Se.Set Beam.lineColor lineColor,
-      Se.Set Beam.lineColorCode lineColorCode,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),
       Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
       Se.Set Beam.payerVpa payerVpa,
       Se.Set Beam.paymentTxnId paymentTxnId,
-      Se.Set Beam.platformNumber platformNumber,
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),
       Se.Set Beam.price ((.amount) price),
       Se.Set Beam.providerDescription providerDescription,

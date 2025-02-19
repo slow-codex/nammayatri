@@ -43,6 +43,7 @@ import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.SubscriptionConfig as DSC
 import qualified Domain.Types.WebhookExtra as WT
 import Environment
+import Kernel.Beam.Functions (runInMasterDb)
 import Kernel.Beam.Functions as B (runInReplica)
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as DPayments
@@ -108,7 +109,8 @@ createOrder (driverId, merchantId, opCityId) invoiceId = do
       >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
   let paymentServiceName = subscriptionConfig.paymentServiceName
       splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
-  vendorFees <- if splitEnabled then concat <$> mapM (QVF.findAllByDriverFeeId . Domain.Types.DriverFee.id) (catMaybes driverFees) else pure []
+  vendorFees' <- if splitEnabled then concat <$> mapM (QVF.findAllByDriverFeeId . Domain.Types.DriverFee.id) (catMaybes driverFees) else pure []
+  let vendorFees = map SPayment.roundVendorFee vendorFees'
   (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId, opCityId) paymentServiceName (catMaybes driverFees, []) Nothing INV.MANUAL_INVOICE (getIdAndShortId <$> listToMaybe invoices) vendorFees Nothing splitEnabled
   return createOrderResp
   where
@@ -318,7 +320,7 @@ updatePaymentStatus ::
   DP.ServiceNames ->
   m ()
 updatePaymentStatus driverId merchantOpCityId serviceName = do
-  dueInvoices <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName (cast driverId) serviceName
+  dueInvoices <- runInMasterDb $ QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName (cast driverId) serviceName
   let totalDue = sum $ calcDueAmount dueInvoices
   when (totalDue <= 0) $ QDI.updatePendingPayment False (cast driverId)
   mbDriverPlan <- findByDriverIdWithServiceName (cast driverId) serviceName -- what if its changed? needed inside lock?
